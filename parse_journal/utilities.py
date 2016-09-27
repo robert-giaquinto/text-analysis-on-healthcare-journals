@@ -21,7 +21,7 @@ def split_json_file(filename, n_splits, infile_len=None):
         in_file_len = count_lines(filename)
 
     # when copying lines of 'filename' to a new file, need to know when to begin copying the lines to a new file 
-    lines_per_shard = ceil(infile_len / n_splits)
+    lines_per_shard = int(ceil(1.0 * infile_len / n_splits))
     split_points = []
     line_ct = 0
     while line_ct < infile_len -  lines_per_shard:
@@ -36,7 +36,7 @@ def split_json_file(filename, n_splits, infile_len=None):
         os.makedirs(shard_dir)
     
     # loop through filename given, copy lines_per_shard lines to each new file
-    outfile_ct = 0
+    outfile_ct = 1
     outfile = open(shard_dir + file_prefix + '_01_of_' + str(n_splits) + '.json', 'wb')
     with open(filename, 'r') as fin:
         for i, line in enumerate(fin):
@@ -44,7 +44,7 @@ def split_json_file(filename, n_splits, infile_len=None):
                 # split point reached, close current file, open a new one
                 outfile.close()
                 outfile_ct +=1
-                outfile = open(shard_dir + file_prefix + '_' + str(outfile_ct + 1).zfill(2) + '_of_' + str(n_splits) + '.json', 'wb')
+                outfile = open(shard_dir + file_prefix + '_' + str(outfile_ct).zfill(2) + '_of_' + str(n_splits) + '.json', 'wb')
                 outfile.write(line)
             else:
                 # keep writing to the same file that's currently open

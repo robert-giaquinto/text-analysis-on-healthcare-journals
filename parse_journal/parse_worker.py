@@ -80,9 +80,9 @@ class JournalParsingWorker(object):
         Check to see if this journal should be skipped.
         """
         if 'isDeleted' in json_dict:
-            return json_dict['isDeleted'] == 1
+            return json_dict['isDeleted'] == "1"
         if 'isDraft' in json_dict:
-            return json_dict['isDraft'] == 1
+            return json_dict['isDraft'] == "1"
         return False
 
     def check_directory(self, site_id):
