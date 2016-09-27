@@ -1,0 +1,1 @@
+python /home/srivbane/shared/caringbridge/src/parse_journal/parse_manager.py --input_file /home/srivbane/shared/caringbridge/data/dev/journal.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json/ --n_workers 1 --log --clean
