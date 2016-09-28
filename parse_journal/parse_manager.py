@@ -11,6 +11,7 @@ import copy_reg
 import types
 from parse_worker import JournalParsingWorker
 from utilities import split_json_file
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -78,13 +79,15 @@ class JournalParsingManager(object):
             input_files = [input_file]
         else:
             # split the file so there is work availabe for each worker
+            start = time.time()
             input_files = self.check_file_splits(input_file, input_file_length)
-
+            end = time.time()
+            logger.info("Time to split the files into shards " + str(end - start))
         
         if len(input_files) == 1:
             logger.info("No parallel processing needed, only one file for one worker")
             worker = JournalParsingWorker(input_path=input_files[0], output_dir=output_dir, verbose=self.verbose)
-            worker.parse_file()
+            num_skipped = worker.parse_file()
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
             # create instructions to pass to each worker
@@ -93,8 +96,10 @@ class JournalParsingManager(object):
             processes = [JournalParsingWorker(input_path=i, output_dir=o, verbose=v) for i, o, v in args_list]
             pool = mp.Pool(processes=self.n_workers)
             function_call = partial(JournalParsingWorker.parse_file)
-            pool.map(function_call, processes)
+            num_skipped_list = pool.map(function_call, processes)
             pool.close()
+            num_skipped = sum(num_skipped_list)
+        logger.info("Total number of (deleted + draft) journal entries skipped: " + str(num_skipped))
 
 
 def main():
@@ -116,9 +121,15 @@ def main():
         cmd = 'rm -rf /home/srivbane/shared/caringbridge/data/parsed_json'
         subprocess.call(cmd, shell=True)
         subprocess.call('mkdir /home/srivbane/shared/caringbridge/data/parsed_json', shell=True)
-    
+        print("Remove shard files from previous run...")
+        cmd = "rm -rf " + args.input_file.replace('.json', '_shards')
+        subprocess.call(cmd, shell=True)
+
+    start = time.time()
     manager = JournalParsingManager(n_workers=args.n_workers, verbose=args.verbose)
     manager.parse_files(input_file=args.input_file, output_dir=args.output_dir, input_file_length=args.num_lines)
-
+    end = time.time()
+    print("Time to parse the file:", end - start, "seconds.")
+    
 if __name__ == "__main__":
     main()

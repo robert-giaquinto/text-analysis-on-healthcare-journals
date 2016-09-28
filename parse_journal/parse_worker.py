@@ -52,9 +52,10 @@ class JournalParsingWorker(object):
         Primary function to call, this does all the work
         """
         logger.info('Opening file: ' + self.input_path)
+        num_skipped = 0
         with open(self.input_path, 'r') as fin:
             for i, line in enumerate(fin):
-                if i % 100 == 0:
+                if i % 1000 == 0:
                     logger.info('Processing journal: ' + str(i))
                 
                 # parse the json
@@ -63,7 +64,7 @@ class JournalParsingWorker(object):
                 # put in checks to see if journal should be skipped (i.e. deleted=True, draft=True)
                 skip = self.check_skip(json_dict)
                 if skip:
-                    logger.info('Skipping:\n' + line)
+                    num_skipped += 1
                     continue
 
                 # check if a site exists for the site_id, create directory if not
@@ -74,7 +75,8 @@ class JournalParsingWorker(object):
 
                 # open a new file for this journal entry and paste in the text
                 self.save_journal(json_dict)
-
+        return num_skipped
+                
     def check_skip(self, json_dict):
         """
         Check to see if this journal should be skipped.
@@ -88,7 +90,10 @@ class JournalParsingWorker(object):
     def check_directory(self, site_id):
         site_dir = os.path.join(self.output_dir, str(site_id))
         if not os.path.isdir(site_dir):
-            os.makedirs(site_dir)
+            try:
+                os.makedirs(site_dir)
+            except OSError:
+                pass
     
     def save_journal(self, json_dict):
         """
