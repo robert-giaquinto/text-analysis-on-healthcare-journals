@@ -81,11 +81,16 @@ class JournalParsingWorker(object):
         """
         Check to see if this journal should be skipped.
         """
+        any_deletes = 0
         if 'isDeleted' in json_dict:
-            return json_dict['isDeleted'] == "1"
+            any_deletes += json_dict['isDeleted'] == "1"
+
         if 'isDraft' in json_dict:
-            return json_dict['isDraft'] == "1"
-        return False
+            any_deletes += json_dict['isDraft'] == "1"
+        
+        # is there a more efficient way to perform this check?
+        any_deletes += json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
+        return any_deletes > 0
 
     def check_directory(self, site_id):
         site_dir = os.path.join(self.output_dir, str(site_id))
