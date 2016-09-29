@@ -104,7 +104,7 @@ class JournalParsingManager(object):
 
 def main():
     import subprocess
-    parser = argparse.ArgumentParser(description='Main progam for running topic modeling experiments.')
+    parser = argparse.ArgumentParser(description='Main program for calling multiple workers to parse the journals.json file.')
     parser.add_argument('-i', '--input_file', type=str, help='Name of the journal file you want parsed..')
     parser.add_argument('--num_lines', type=int, help='Number of lines in the input_file. Specifying this can speed up performance of splitting the file into shards.')
     parser.add_argument('-o', '--output_dir', type=str, help='Name of output directory for where to create site directories.')

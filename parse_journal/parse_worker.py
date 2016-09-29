@@ -124,7 +124,7 @@ class JournalParsingWorker(object):
 
 def main():
     import subprocess
-    parser = argparse.ArgumentParser(description='Main progam for running topic modeling experiments.')
+    parser = argparse.ArgumentParser(description='Example for how to run the parse worker to extract journals from a journal.json file.')
     parser.add_argument('-i', '--input_path', type=str, help='Name of journal file to parse.')
     parser.add_argument('-o', '--output_dir', type=str, help='Name of output directory to create site directories.')
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')

@@ -16,7 +16,10 @@ class KeyCollector(object):
         if verbose:
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-    def extract_keys(self, filename):
+    def split_keys(self, filename):
+        """
+        pull out the individual journal keys contained in the journals filename
+        """
         _, siteId, userId, journalId, createdAt = filename.split('_')
         rval = [siteId, userId, journalId, createdAt]
         return rval
@@ -38,11 +41,11 @@ class KeyCollector(object):
                 journal_filenames = sorted([f for f in os.listdir(site_path) if f[0:7] == 'journal'])
                 for journal_filename in journal_filenames:
                     # parse the filename to extract key information
-                    journal_keys = self.extract_keys(journal_filename)
+                    journal_keys = self.split_keys(journal_filename)
                     fout.write('\t'.join(journal_keys) + '\n')
 
 def main():
-    parser = argparse.ArgumentParser(description='Main progam for running topic modeling experiments.')
+    parser = argparse.ArgumentParser(description='Example of how to collect keys on all journals that have been parsed, and put into a flat file.')
     parser.add_argument('-i', '--input_dir', type=str, help='Path to directory containing all the site directories.')
     parser.add_argument('-o', '--output_filename', type=str, help='Full filename to for where to save all the keys found..')
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
