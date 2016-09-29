@@ -15,14 +15,6 @@ class KeyCollector(object):
 
         if verbose:
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-
-    def split_keys(self, filename):
-        """
-        pull out the individual journal keys contained in the journals filename
-        """
-        _, siteId, userId, journalId, createdAt = filename.split('_')
-        rval = [siteId, userId, journalId, createdAt]
-        return rval
     
     def collect_keys(self, sort_results=True):
         """
@@ -36,13 +28,17 @@ class KeyCollector(object):
         with open(self.output_filename, 'wb') as fout:
             for siteId in site_dirs:
                 logger.info("Collecting keys for site "+ siteId)
+
                 # find all journal entries for this site
                 site_path = os.path.join(self.input_dir, siteId)
-                journal_filenames = sorted([f for f in os.listdir(site_path) if f[0:7] == 'journal'])
+                journal_filenames = os.listdir(site_path)
+
+                # loop through each filename and save the journal's keys to the flat file
                 for journal_filename in journal_filenames:
                     # parse the filename to extract key information
-                    journal_keys = self.split_keys(journal_filename)
+                    journal_keys = journal_filename.split('_')
                     fout.write('\t'.join(journal_keys) + '\n')
+
 
 def main():
     parser = argparse.ArgumentParser(description='Example of how to collect keys on all journals that have been parsed, and put into a flat file.')

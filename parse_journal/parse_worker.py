@@ -106,18 +106,15 @@ class JournalParsingWorker(object):
             else:
                 filename_list.append(str(json_dict[field]))
         output_filename = '_'.join(filename_list)
-        journal_file = os.path.join(self.output_dir, str(json_dict['siteId']), 'journal_' + output_filename)
-        title_file = os.path.join(self.output_dir, str(json_dict['siteId']), 'title_' + output_filename)
+        journal_file = os.path.join(self.output_dir, str(json_dict['siteId']), output_filename)
 
-        # write out the journal entry to a file
-        if 'body' in json_dict:
-            with open(journal_file, 'wb') as j:
-                j.write(json_dict['body'].encode('utf-8').strip())
-
-        # write out the title of the journal entry to a file
+        # write out the text int the journal entry, include title (if exists) at begining.
+        text = json_dict['body'].encode('utf-8').strip()
         if 'title' in json_dict:
-            with open(title_file, 'wb') as t:
-                t.write(json_dict['title'].encode('utf-8').strip())
+            text = json_dict['title'].encode('utf-8').strip() + ' ' + text
+
+        with open(journal_file, 'wb') as f:
+            f.write(text)
                   
         
 

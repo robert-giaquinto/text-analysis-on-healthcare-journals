@@ -38,7 +38,7 @@ class Journals(object):
             kc.collect_keys()
         elif not os.path.isfile(keys_file):
             logger.info("The key's file given doesn't exists. Creating keys for all directories in sites_dir")
-            self.keys_file = key_file
+            self.keys_file = keys_file
             kc = KeyCollector(input_dir=sites_dir, output_filename=self.keys_file, verbose=verbose)
             kc.collect_keys()
         else:
@@ -60,9 +60,11 @@ class Journals(object):
         """
         with open(self.keys_file, 'r') as key_file:
             for line in key_file:
-                siteId, userId, journalId, createdAt = line.replace('\n', '').strip().split('\t')
-
-                filename = os.path.join(self.sites_dir, siteId, 'journal_' + siteId + '_' + userId + '_' + journalId + '_' + createdAt)
+                # pull out the keys to a journal and unpack the values into variables 
+                journal_keys = line.replace('\n', '').strip().split('\t')
+                siteId, userId, journalId, createdAt = journal_keys
+                
+                filename = os.path.join(self.sites_dir, siteId, '_'.join(journal_keys))
                 with open(filename, 'r') as journal_file:
                     # body of journal may be spread out of multiple lines, remove all blank lines
                     body = filter(None, [j.replace('\n', ' ').strip() for j in journal_file.readlines()])

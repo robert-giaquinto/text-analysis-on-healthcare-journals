@@ -15,9 +15,14 @@ class TestWorker(unittest.TestCase):
         with open("./test_worker_data/test_journal.json", "wb") as f:
             for s in range(4):
                 for j in range(3):
-                    if j > 0:
-                        line = '{ "_id" : { "$oid" : "' + str(j + 3 * s) + '" }, "siteId" : ' + str(s) + ', "journalId" : ' + str(j) + ', "userId" : 0, "isDraft" : "0", "title" : "TITLE' + str(s) + str(j) + '", "amps" : [], "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY' + str(s) + str(j) + '", "updatedAt" : { "$date" : 1371412342000 }, "createdAt" : { "$date" : 1371412342000 } }\n'
+                    if j == 0:
+                        # normal data, no delete flags, all fields exist
+                        line = '{ "_id" : { "$oid" : "' + str(j + 3 * s) + '" }, "siteId" : ' + str(s) + ', "journalId" : ' + str(j) + ', "userId" : 0, "isDraft" : "0", "title" : "TITLE", "amps" : [], "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY' + str(s) + str(j) + '", "updatedAt" : { "$date" : 1371412342000 }, "createdAt" : { "$date" : 1371412342000 } }\n'
+                    elif j == 1:
+                        # no titles
+                        line = '{ "_id" : { "$oid" : "' + str(j + 3 * s) + '" }, "siteId" : ' + str(s) + ', "journalId" : ' + str(j) + ', "userId" : 0, "isDraft" : "0", "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY' + str(s) + str(j) + '", "updatedAt" : { "$date" : 1371412342000 }, "createdAt" : { "$date" : 1371412342000 } }\n'
                     else:
+                        # delete flag
                         line ='{ "_id" : { "$oid" : "' + str(j + 3 * s) + '" }, "siteId" : ' + str(s) + ', "journalId" : ' + str(j) + ', "userId" : 0, "isDraft" : "1", "title" : "TITLE' + str(s) + str(j) + '", "amps" : [], "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY' + str(s) + str(j) + '", "updatedAt" : { "$date" : 1371412342000 }, "createdAt" : { "$date" : 1371412342000 } }\n'
                     f.write(line)
 
@@ -75,9 +80,8 @@ class TestWorker(unittest.TestCase):
         for siteId in range(4):
             actual += os.listdir('./test_worker_data/' + str(siteId))
             for journalId in range(3):
-                if journalId > 0:
-                    expected.append('journal_' + str(siteId) + '_0_' + str(journalId) + '_1371412342000')
-                    expected.append('title_' + str(siteId) + '_0_' + str(journalId) + '_1371412342000') 
+                if journalId < 2:
+                    expected.append(str(siteId) + '_0_' + str(journalId) + '_1371412342000')
                 
         self.remove_test_data()
         self.assertItemsEqual(expected, actual)
@@ -95,9 +99,10 @@ class TestWorker(unittest.TestCase):
                     actual.append(fin.readline().replace('\n', '').strip())
                     
             for journalId in range(3):
-                if journalId > 0:
+                if journalId == 0:
+                    expected.append('TITLE BODY' + str(siteId) + str(journalId))
+                elif journalId == 1:
                     expected.append('BODY' + str(siteId) + str(journalId))
-                    expected.append('TITLE' + str(siteId) + str(journalId)) 
                 
         self.remove_test_data()
         self.assertItemsEqual(expected, actual)
