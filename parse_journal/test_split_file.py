@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import unittest
 import os
 from math import floor
-from utilities import split_json_file, count_lines
+from utilities import split_file, count_lines
 
 class TestSplitFile(unittest.TestCase):
     @classmethod
@@ -24,7 +24,8 @@ class TestSplitFile(unittest.TestCase):
         os.rmdir('./test_data')
 
     def setUp(self):
-        split_json_file('./test_data/test_journal.json', n_splits=2, infile_len=12)
+        # split the file before each test, don't worry about the names of the files
+        _ = split_file('./test_data/test_journal.json', n_splits=2, infile_len=12)
 
     def tearDown(self):
         # remove the file shards created

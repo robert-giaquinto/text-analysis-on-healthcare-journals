@@ -3,31 +3,27 @@ import argparse
 from journals import Journals, Journal
 
 
-def journal_cleaner(journal_text):
-    """
-    example of a function to clean the journal text
-    """
-    rval = journal_text.replace('\n', '')
-    return rval
-
-
 def main():
     # where are the data location?
     sites_dir = "/home/srivbane/shared/caringbridge/data/parsed_json/"
-    keys_file = "/home/srivbane/shared/caringbridge/data/parsed_json/all_keys.tsv"
+    keys_file = "/home/srivbane/shared/caringbridge/data/clean_journals/all_keys.tsv"
 
     # create the object that iterates over journal entries
-    j = Journals(sites_dir=sites_dir, keys_file=keys_file)
-    gen = j.journal_generator()
+    j = Journals(sites_dir=sites_dir, keys_file=keys_file, verbose=True)
 
-    for i, journal in enumerate(gen):
+    print("Iterating over the stream of journal entries")
+    print("and applying the journal cleaning method defined")
+    print("in Journals.clean_journal()")
+    for i, journal in enumerate(j.stream):
         # only do this for a few journal
-        if i > 3:
+        if i > 2:
             break
 
         # perform the data cleaning
-        cleaned_body = journal_cleaner(journal.body)
-        print(cleaned_body, "\n")
+        body = journal.body # save original for comparison
+        cleaned_journal = j.clean_journal(journal)
+        print(cleaned_journal)
+        print("Body before cleaning:", body, "\n")
     
 
 

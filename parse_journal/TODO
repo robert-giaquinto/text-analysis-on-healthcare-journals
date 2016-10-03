@@ -11,3 +11,9 @@ DONE
 4. Write a test to make sure parse_manager.py's method check_file_splits
    calls the file splitter at the appropriate time. Checking that the file
    splits are correct is already tested in test_split_file.py
+
+5. There might still be folders for sites even when all journals for that
+site were deleted (or we're skipping them because it's just the default journal
+entry). This might cause a bug later. Should delete these empty site folders
+at the end of the parse_manager, or should perform some check to not create them,
+i think the first option is easiest.

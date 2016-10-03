@@ -1,1 +1,1 @@
-python ~/text-analysis/parse_journal/parse_manager.py --input_file /home/srivbane/shared/caringbridge/data/dev/journal.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json/ --n_workers 2 --num_lines 1000 --log --clean
+python ~/text-analysis/parse_journal/parse_manager.py --input_file /home/srivbane/shared/caringbridge/data/dev/journal.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json/ --n_workers 2 --num_lines 10000 --log --clean

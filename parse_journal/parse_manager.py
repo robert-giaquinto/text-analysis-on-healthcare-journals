@@ -10,32 +10,12 @@ import cPickle as pickle
 import copy_reg
 import types
 from parse_worker import JournalParsingWorker
-from utilities import split_json_file
+from utilities import split_file, _pickle_method, _unpickle_method
 import time
 
 logger = logging.getLogger(__name__)
 
-
 # need to change how pickling is done to run class objects in parallel
-def _pickle_method(method):
-    func_name = method.im_func.__name__
-    obj = method.im_self
-    cls = method.im_class
-    if func_name.startswith('__') and not func_name.endswith('__'): #deal with mangled names
-        cls_name = cls.__name__.lstrip('_')
-        func_name = '_' + cls_name + func_name
-    return _unpickle_method, (func_name, obj, cls)
-
-def _unpickle_method(func_name, obj, cls):
-    for cls in cls.__mro__:
-        try:
-            func = cls.__dict__[func_name]
-        except KeyError:
-            pass
-        else:
-            break
-    return func.__get__(obj, cls)
-
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
@@ -65,7 +45,7 @@ class JournalParsingManager(object):
             logger.info('Looks like the file splits already exist, no need to re-split')
         else:
             logger.info('Splitting the file now')
-            split_json_file(input_file, self.n_workers, input_file_length)
+            _ = split_file(input_file, self.n_workers, input_file_length)
 
         return shard_filenames
     

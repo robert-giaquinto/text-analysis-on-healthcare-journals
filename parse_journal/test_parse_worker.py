@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import unittest
 import os
 from math import floor
-from utilities import split_json_file, count_lines
+from utilities import split_file, count_lines
 from parse_worker import JournalParsingWorker
 import json
 
