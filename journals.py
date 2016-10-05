@@ -6,6 +6,7 @@ from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from nltk import pos_tag
 import re
+import unicodedata
 
 from parse_journal.collect_journal_keys import KeyCollector
 
@@ -47,14 +48,22 @@ class Journals(object):
             self.stream = None
 
         # store variables for cleaning text here, so it's accessible to all worker nodes
-        self.lemmatizer = WordNetLemmatizer()        
-        self.stopword_set = set(stopwords.words("english"))
-        self.split_dash = re.compile(r"([a-zA-Z])([-/])([a-zA-Z])")
+        self.lemmatizer = WordNetLemmatizer()
+
+        # trying to err on the side of not removing too many 'stopwords'
+        base_stopwords = stopwords.words("english")
+        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'what', u'who', u'whom', u'if', u'until', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down',  u'on', u'off', u'over', u'under', u'again', u'further', u'when', u'where', u'why', u'own']
+        self.stopword_set = set([w for w in base_stopwords if w not in not_stopwords])
+        
+        self.split_dash1 = re.compile(r"([a-zA-Z])([\-/])([a-zA-Z])")
+        self.split_dash2 = re.compile(r"([0-9])([\-/])([a-zA-Z])")
+        self.split_dash3 = re.compile(r"([a-zA-Z])([\-/])([0-9])")
         self.punct = re.compile(r"[^a-zA-Z_ ]") # keeping _'s in so we can use them as a special identifier
 
+        # search for contractions
         self.iam = re.compile(r"'m")
         self.willnot = re.compile(r"wont't")
-        self.nt = re.compile(r"n't")
+        self.cannot = re.compile(r"can't")
         self.itis = re.compile(r"it's")
         self.letus = re.compile(r"let's")
         self.heis = re.compile(r"he's")
@@ -67,19 +76,25 @@ class Journals(object):
         self.whois = re.compile(r"who's")
         self.whyis = re.compile(r"why's")
         self.youall = re.compile(r"y'all")
+        self.youare = re.compile(r"you're")
         self.would = re.compile(r"'d")
         self.has = re.compile(r"'s")
-        self.youare = re.compile(r"you're")
-        self.will = re.compile("'ll")
-        self.s_apostrophe = re.compile("s' ")
+        self.nt = re.compile(r"n't")
+        self.will = re.compile(r"'ll")
+        self.have = re.compile(r"'ve")
+        self.s_apostrophe = re.compile(r"s' ")
 
         # here are some other regexs to capture certain patters, but it might be more efficient
         # to run these on the whole text final (via grep from command line)
         self.html = re.compile(r"<[^>]*>")
         self.years = re.compile(r"\b(18|19|20)[0-9]{2}\b")
         self.punct = re.compile(r"[^a-zA-Z_\s]")
-        #self.dollars = re.compile(r"\$[1-9][0-9,\.]+")
-        # email addresses? times? dates? numbers? 
+        self.dollars = re.compile(r"\$[1-9][0-9,\. ]+")
+        self.times = re.compile(r"(2[0-3]|[01]?[0-9]):([0-5]?[0-9])")
+        # email addresses? times? dates? numbers?
+
+        # remove special characters that aren't needed (ex. &quot; &amp;)
+        self.special_chars = re.compile(r"&[a-z]+;")
 
     def init_keys_file(self, keys_file):
         # check is a keys file is given (and if it really exists), if not create one
@@ -153,19 +168,35 @@ class Journals(object):
                  so that the text is represented as a list of words
         
         """
-        # split hyphens and slashes
-        journal.body = self.split_dash.sub("$1 $3", journal.body)
+        # This could be used to convert everything to ascii
+        # NEEDS: import unicodedata
+        # REMOVE THIS ONCE WE FIGURE OUT HOW TO WORK WITH EMOJIS
+        journal.body = unicodedata.normalize('NFKD', journal.body.decode('utf-8')).encode('ascii', 'ignore')
+
+        # remove html
+        journal.body = self.html.sub(" ", journal.body)
+
+        # remove extra white space (i.e. "\n\r\t\f\v ")
+        journal.body = re.sub(r"\s+", " ", journal.body)
+        
+        # split hyphens and slashes where appropriate
+        journal.body = self.split_dash1.sub(r"\1 \3", journal.body)
+        journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
+        journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
         
         # homogenize special patterns
         journal.body = self.years.sub(" _year_ ", journal.body)
-
+        journal.body = self.dollars.sub(" _dollars_ ", journal.body)
+        journal.body = self.times.sub(" _time_ ", journal.body)
+        
         # save emojis
         # ??? don't know how, what emojis are out there?
 
         # expand contractions
+        # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
         journal.body = self.iam.sub(" am", journal.body)
         journal.body = self.willnot.sub("will not", journal.body)
-        journal.body = self.nt.sub(" not", journal.body)
+        journal.body = self.cannot.sub("can not", journal.body)
         journal.body = self.itis.sub("it is", journal.body)
         journal.body = self.letus.sub("let us", journal.body)
         journal.body = self.heis.sub("he is", journal.body)
@@ -178,28 +209,33 @@ class Journals(object):
         journal.body = self.whois.sub("who is", journal.body)
         journal.body = self.whyis.sub("why is", journal.body)
         journal.body = self.youall.sub("you all", journal.body)
-        journal.body = self.would.sub(" would", journal.body)
         journal.body = self.youare.sub("you are", journal.body)
+        journal.body = self.would.sub(" would", journal.body)
         journal.body = self.will.sub(" will", journal.body)
-        journal.body = self.s_apostrophe.sub(" has", journal.body)
+        journal.body = self.s_apostrophe.sub("s has", journal.body)
         journal.body = self.has.sub(" has", journal.body)
+        journal.body = self.nt.sub(" not", journal.body)
+        journal.body = self.have.sub(" have", journal.body)
 
-        # remove html
-        journal.body = self.html.sub(" ", journal.body)
+        # remove special characters
+        journal.body = self.special_chars.sub(" ", journal.body)
 
         # remove remaining punctuation (except underscores)
         journal.body = self.punct.sub(" ", journal.body)
 
-        # to lowercase and tokenize
-        journal.body = journal.body.lower().split()
+        # tokenize
+        journal.body = journal.body.split()
         journal.tokenized = True # setting this flag helps printing journal objects
 
         # remove stopwords
-        journal.body = [w for w in journal.body in w not in self.stopword_set]
+        journal.body = [w for w in journal.body if w not in self.stopword_set]
         # lemmatize the remaining tokens
-        journal.body = [self.lemmatizer.lemmatize(w, pos=self.get_word_net_pos(p) if self.get_wordnet_pos(p) != '' \
-                                                      else self.lemmatizer.lemmatize(w) \
+        # convert to lowercase, would like to do this earlier, but might get better lemmatizing results
+        # if case is saved during lemmatization
+        journal.body = [self.lemmatizer.lemmatize(w, pos=self.get_wordnet_pos(p)).lower() if self.get_wordnet_pos(p) != '' \
+                                                      else self.lemmatizer.lemmatize(w).lower() \
                                                       for w, p in pos_tag(journal.body)]
+
         return journal
 
     def process_journals(self):

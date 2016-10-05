@@ -151,7 +151,7 @@ def main():
     print("Printing top rows of output:", "\n")
     with open(args.outfile, 'r') as fin:
         for i, line in enumerate(fin):
-            if i > 5:
+            if i > 25:
                 break
 
             print(line.replace('\n', ''))
