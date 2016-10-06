@@ -7,7 +7,9 @@ import copy_reg
 import types
 import logging
 import argparse
+import time
 from parse_journal.utilities import count_lines, split_file, _pickle_method, _unpickle_method
+from parse_journal.collect_journal_keys import KeyCollector
 from journals import Journal, Journals
 
 logger = logging.getLogger(__name__)
@@ -17,11 +19,20 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 class JournalsManager(object):
     """
-    Provides functionality to create journals
-    objects that clean multiple shards of the text
-    data in parallel, and then combines the results
+    Provides functionality to create 'journals' objects that
+    partition all the data and clean them using parallel nodes,
+    and then combines the results into a single flat file.
+
+    TODO:
+    1. may want final result create by process_journals() to be a bag of words file and a vocabulary,
+       instead of a flat file with the cleaned text?
+    
+    2. it would be cleaner to have clean_method be an argument passed to
+       the clean_journal() method of Journals, rather than a class variable
+       of Journals. This would require passing function arguments in the
+       multiprocessing code -- how is this done?
     """
-    def __init__(self, sites_dir, keys_file, n_workers=1, verbose=True):
+    def __init__(self, sites_dir, keys_file, clean_method='topic', n_workers=1, verbose=True):
         """
         Args:
             sites_dir: Folder containing all of the sites folders. For example:
@@ -30,11 +41,15 @@ class JournalsManager(object):
                        entries. If this file doesn't exists, it will be created.
                        Example:
                        /home/srivbane/shared/caringbridge/data/cleaned_journals/all_keys.tsv
+            clean_method: Can be any one of ('topic', 'sentiment', 'none'), specifying
+                       the method of cleaning the text (either for topic modeling, sentiment
+                       analysis, or no cleaning, respectively
             n_workers: The number of nodes to use to process the data. Defaults to 1 node.
             verbose:   Should progress be printed to the log? True/False
         Returns: Nothing, just initializes the class instance.
         """
         self.sites_dir = sites_dir
+        self.clean_method = clean_method
         self.n_workers = n_workers
         self.verbose = verbose
         if verbose:
@@ -106,7 +121,7 @@ class JournalsManager(object):
             logger.info("No parallel processing needed, only one worker requested.")
             with open(outfile, 'wb') as fout:
                 for keys_file in self.keys_list:
-                    j = Journals(sites_dir=self.sites_dir, keys_file=keys_file, init_stream=True, verbose=self.verbose)
+                    j = Journals(sites_dir=self.sites_dir, keys_file=keys_file, init_stream=True, clean_method=self.clean_method, verbose=self.verbose)
                     for i, journal in enumerate(j.stream):
                         journal = j.clean_journal(journal)
                         fout.write(' '.join(journal.body) + '\n')
@@ -114,7 +129,7 @@ class JournalsManager(object):
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
             # create instructions to pass to each worker
-            processes = [Journals(sites_dir=self.sites_dir, keys_file=k, init_stream=False, verbose=self.verbose) for k in self.keys_list]
+            processes = [Journals(sites_dir=self.sites_dir, keys_file=k, init_stream=False, clean_method=self.clean_method, verbose=self.verbose) for k in self.keys_list]
             pool = mp.Pool(processes=self.n_workers)
 
             # tell each worker to run the process_journals function
@@ -145,9 +160,12 @@ def main():
     print('journals_manager.py')
     print(args)
 
+    start = time.time()
     jm = JournalsManager(sites_dir=args.sites_dir, keys_file=args.keys_file, n_workers=args.n_workers, verbose=args.verbose)
     jm.process_journals(outfile=args.outfile)
-
+    end = time.time()
+    print("Time to process the files:", end - start, "seconds")
+    
     print("Printing top rows of output:", "\n")
     with open(args.outfile, 'r') as fin:
         for i, line in enumerate(fin):

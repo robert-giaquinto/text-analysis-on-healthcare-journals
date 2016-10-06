@@ -19,7 +19,7 @@ class Journals(object):
     """
     provides an iterator over journal entries
     """
-    def __init__(self, sites_dir, keys_file=None, init_stream=True, verbose=False):
+    def __init__(self, sites_dir, keys_file=None, init_stream=True, clean_method="none", verbose=False):
         """
         Args:
             sites_dir:   Folder where all of the folders for each site exist
@@ -33,12 +33,20 @@ class Journals(object):
                          Use init_stream=False if you're running Journals in parallel.
                          To run in parallel  the initialization needs to occur later
                          (and not when the Journals instance is being declared).
+            clean_method: Can be either 'topic', 'sentiment', or 'none' to specify the
+                       method of cleaning the journal text (either for topic modeling,
+                       sentiment analysis, or no cleaning, respectively).
+                       This only needs to be set if the cleaning is being initiated
+                       from the JournalsManager class (i.e. for parallel processing)
+                       otherwise, if you're just interacting with a Journals object in a
+                       for loop you can call whatever cleaning method you want.
             verbose:   Flag for whether or not to print progress to the log.
         """
         if verbose:
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
         self.sites_dir = sites_dir
+        self.clean_method = clean_method
         self.verbose = verbose
         self.init_keys_file(keys_file)
 
@@ -160,6 +168,28 @@ class Journals(object):
 
     def clean_journal(self, journal):
         """
+        This is just a method to call the appropriate method for
+        cleaning the text data.
+        
+        TODO: A better solution is to have clean_method be an argument to clean_journal()
+             rather than a class variable. Need to figure out how to pass
+             function arguments in parallel when using JournalsManager.
+        """
+        if self.clean_method == "topic":
+            return self.clean_journal_for_topic_modeling(journal)
+        elif self.clean_method == "sentiment":
+            raise ValueError("This method of cleaning the text data has not yet been implemented")
+        elif self.clean_method == "none":
+            return journal
+        else:
+            raise ValueError("clean_method class variable must be either topic, sentiment, or none")
+
+    def clean_journal_for_sentiment_analysis(self, journal):
+        # TODO
+        return journal
+
+    def clean_journal_for_topic_modeling(self, journal):
+        """
         Implement function for how to clean text of a journal
 
         Args:
@@ -241,6 +271,11 @@ class Journals(object):
     def process_journals(self):
         """
         Clean and tokenize all journals in the stream.
+        
+        This method is solely needed for when parallel processing
+        of journals is invoked from the JournalsManager class. Parallel
+        nodes must process and store the results in RAM, then return them.
+
         Args:
             None
         Returns: A list of lists. Each elt in list is a journal, the sublists 
