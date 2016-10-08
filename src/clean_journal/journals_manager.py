@@ -73,12 +73,12 @@ class JournalsManager(object):
         if keys_file is None:
             logger.info("No key's file given. Creating keys for all directories in sites_dir")
             self.keys_file = "/home/srivbane/shared/caringbridge/data/clean_journals/all_keys.tsv"
-            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=self.verbose)
+            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=False)
             kc.collect_keys()
         elif not os.path.isfile(keys_file):
             logger.info("The key's file given doesn't exists. Creating keys for all directories in sites_dir")
             self.keys_file = keys_file
-            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=self.verbose)
+            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=False)
             kc.collect_keys()
         else:
             self.keys_file = keys_file

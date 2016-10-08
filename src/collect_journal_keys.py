@@ -27,8 +27,6 @@ class KeyCollector(object):
         
         with open(self.output_filename, 'wb') as fout:
             for siteId in site_dirs:
-                logger.info("Collecting keys for site "+ siteId)
-
                 # find all journal entries for this site
                 site_path = os.path.join(self.input_dir, siteId)
                 journal_filenames = os.listdir(site_path)
