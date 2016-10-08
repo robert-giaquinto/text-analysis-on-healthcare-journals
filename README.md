@@ -53,17 +53,28 @@
    There is a file in the misc folder for downloading all the data for NLTK. To run it use this:
 
    ```bash
-   python ~/text-analysis/misc/download_nltk_data.py
+   python ~/text-analysis/download_nltk_data.py
    ```
 
    If you use other files from NLTK, add them to the list of things to download in the python file mentioned above.
 
 
 ## Interacting with Journals ##
-See example_cleaning_journals.py for how to iterate over all the journals and run the journal's ``clean_journal()`` method.
+See example_cleaning_journals.py for how to iterate over all the journals and run the journal's ``clean_journal()`` on each journal method.
 
 For an example of running this parallel, stay tuned an example is in the works...
 
 
-## Modules ##
-* parse_journal - for parsing out the text from the journal.json files.
+## Project Structure ##
+* `examples/` - A few simple python programs showing how to interact with various classes.
+* `scripts/` - Bash scripts for running programs.
+* `src/` - Directory containing various sub-packages of the project and any files shared across sub-packages.
+   * `src/parse_journal/` - For parsing out the text from the journal.json files.
+   * `src/clean_journal/` - For iterating over each journal, cleaning journal text, and creating flat files of all cleaned journal data.
+   * `src/topic_model/` - For implementing various topic modeling algorithms.
+   * `src/tests/` - Test suite for the all code. To run all tests navigate to ``~/text-analysis`` and run:
+
+       ```bash
+       python setup.py test
+       ```
+

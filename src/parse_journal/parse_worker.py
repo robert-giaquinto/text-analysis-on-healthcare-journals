@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import re
 import os
 import logging
@@ -130,18 +130,10 @@ def main():
     parser.add_argument('-i', '--input_path', type=str, help='Name of journal file to parse.')
     parser.add_argument('-o', '--output_dir', type=str, help='Name of output directory to create site directories.')
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
-    parser.add_argument('--clean', dest='clean', action='store_true', help='Add this flag to remove all site directories before running the program')
-    parser.set_defaults(clean=False)
     parser.set_defaults(verbose=True)
     args = parser.parse_args()
     print('parse_worker.py')
     print(args)
-
-    if args.clean:
-        print('Removing data from a previous run...')
-        cmd = 'rm -rf /home/srivbane/shared/caringbridge/data/parsed_json'
-        subprocess.call(cmd, shell=True)
-        subprocess.call('mkdir /home/srivbane/shared/caringbridge/data/parsed_json', shell=True)
 
     worker = JournalParsingWorker(input_path=args.input_path, output_dir=args.output_dir, verbose=args.verbose)
     worker.parse_file()

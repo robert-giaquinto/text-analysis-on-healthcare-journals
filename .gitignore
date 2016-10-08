@@ -4,3 +4,6 @@
 *.pyc
 *.py~
 *.sh~
+build/
+dist/
+text_analysis.egg-info/

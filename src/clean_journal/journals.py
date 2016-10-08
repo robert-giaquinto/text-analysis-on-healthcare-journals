@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import os
 import logging
 import argparse
@@ -8,7 +8,7 @@ from nltk import pos_tag
 import re
 import unicodedata
 
-from parse_journal.collect_journal_keys import KeyCollector
+from src.collect_journal_keys import KeyCollector
 
 logger = logging.getLogger(__name__)
 

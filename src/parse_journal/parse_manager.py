@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import os
 import logging
 import os
@@ -9,9 +9,10 @@ from functools import partial
 import cPickle as pickle
 import copy_reg
 import types
-from parse_worker import JournalParsingWorker
-from utilities import split_file, _pickle_method, _unpickle_method
 import time
+
+from src.parse_journal.parse_worker import JournalParsingWorker
+from src.utilities import split_file, _pickle_method, _unpickle_method
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,12 @@ def main():
 
     if args.clean:
         print('Removing data from a previous run...')
-        cmd = 'rm -rf /home/srivbane/shared/caringbridge/data/parsed_json'
+        cmd = 'rm -rf ' + args.output_dir
         subprocess.call(cmd, shell=True)
-        subprocess.call('mkdir /home/srivbane/shared/caringbridge/data/parsed_json', shell=True)
+
+        cmd = 'mkdir ' + args.output_dir
+        subprocess.call(cmd, shell=True)
+        
         print("Remove shard files from previous run...")
         cmd = "rm -rf " + args.input_file.replace('.json', '_shards')
         subprocess.call(cmd, shell=True)

@@ -1,1 +1,1 @@
-python ~/text-analysis/parse_journal/collect_journal_keys.py --input_dir /home/srivbane/shared/caringbridge/data/parsed_json --output_filename /home/srivbane/shared/caringbridge/data/parsed_json/keys.tsv --log
+python ~/text-analysis/src/collect_journal_keys.py --input_dir /home/srivbane/shared/caringbridge/data/parsed_json --output_filename /home/srivbane/shared/caringbridge/data/clean_journals/all_keys.tsv --log

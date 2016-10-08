@@ -1,9 +1,9 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import unittest
 import os
 from math import floor
-from utilities import split_file, count_lines
-from parse_worker import JournalParsingWorker
+from src.utilities import split_file, count_lines
+from src.parse_journal.parse_worker import JournalParsingWorker
 import json
 
 

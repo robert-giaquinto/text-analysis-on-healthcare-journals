@@ -1,8 +1,8 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import unittest
 import os
 from math import floor
-from utilities import split_file, count_lines
+from src.utilities import count_lines, split_file
 
 class TestSplitFile(unittest.TestCase):
     @classmethod

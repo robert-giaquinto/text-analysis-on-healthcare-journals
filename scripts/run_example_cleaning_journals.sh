@@ -1,1 +1,1 @@
-python ~/text-analysis/example_cleaning_journals.py
+python ~/text-analysis/examples/example_cleaning_journals.py

@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import multiprocessing as mp
 from functools import partial
 import os
@@ -8,9 +8,9 @@ import types
 import logging
 import argparse
 import time
-from parse_journal.utilities import count_lines, split_file, _pickle_method, _unpickle_method
-from parse_journal.collect_journal_keys import KeyCollector
-from journals import Journal, Journals
+from src.utilities import count_lines, split_file, _pickle_method, _unpickle_method
+from src.collect_journal_keys import KeyCollector
+from src.clean_journal.journals import Journal, Journals
 
 logger = logging.getLogger(__name__)
 # need to change how pickling is done to run class objects in parallel
@@ -152,6 +152,7 @@ def main():
     parser.add_argument('-i', '--sites_dir', type=str, help='Path to directory containing all the site directories.')
     parser.add_argument('-k', '--keys_file', type=str, help='Filename containing the keys to the journals files. Default=None results in using all journals in sites_dir.')
     parser.add_argument('-n', '--n_workers', type=int, default=1, help='Number of workers / CPUs to use to process the journal files.')
+    parser.add_argument('-c', '--clean_method', type=str, default='topic', help='Method of cleaning each journal. Default is the topic modeling cleaning method "topic".')
     parser.add_argument('-o', '--outfile', type=str, help='Name of file to write out all the results to.')
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.set_defaults(verbose=True)
@@ -161,7 +162,7 @@ def main():
     print(args)
 
     start = time.time()
-    jm = JournalsManager(sites_dir=args.sites_dir, keys_file=args.keys_file, n_workers=args.n_workers, verbose=args.verbose)
+    jm = JournalsManager(sites_dir=args.sites_dir, keys_file=args.keys_file, clean_method=args.clean_method, n_workers=args.n_workers, verbose=args.verbose)
     jm.process_journals(outfile=args.outfile)
     end = time.time()
     print("Time to process the files:", end - start, "seconds")
