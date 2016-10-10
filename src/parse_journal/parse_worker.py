@@ -46,6 +46,8 @@ class JournalParsingWorker(object):
         
         # which fields from the journal.json file should we keep (store them in output file names)
         self.fields = ['siteId', 'userId', 'journalId', 'createdAt']
+        self.no_journalId_count = 0
+        self.no_userId_count = 0
 
     def parse_file(self):
         """
@@ -55,7 +57,7 @@ class JournalParsingWorker(object):
         num_skipped = 0
         with open(self.input_path, 'r') as fin:
             for i, line in enumerate(fin):
-                if i % 1000 == 0:
+                if i % 100000 == 0:
                     logger.info('Processing journal: ' + str(i))
                 
                 # parse the json
@@ -73,8 +75,21 @@ class JournalParsingWorker(object):
                     raise ValueError("No siteId found for:\n" + line)
                 self.check_directory(json_dict['siteId'])
 
+                # check if userId doesn't exist, if so make one up
+                if 'userId' not in json_dict:
+                    json_dict['userId'] = str(16000000 - self.no_userId_count)
+                    self.no_userId_count += 1
+                    
+                # check if journalId doesn't exist, if not make up a unique id
+                if 'journalId' not in json_dict:
+                    json_dict['journalId'] = str(16000000 - self.no_journalId_count)
+                    self.no_journalId_count += 1
+                
                 # open a new file for this journal entry and paste in the text
                 self.save_journal(json_dict)
+
+        logger.info("Had to make-up a userId for " + str(self.no_userId_count) + "journals.")
+        logger.info("Had to make-up a journalId for " + str(self.no_journalId_count) + "journals.")
         return num_skipped
                 
     def check_skip(self, json_dict):
@@ -89,7 +104,15 @@ class JournalParsingWorker(object):
             any_deletes += json_dict['isDraft'] == "1"
         
         # is there a more efficient way to perform this check?
-        any_deletes += json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
+        if 'body' in json_dict:
+            any_deletes += json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
+        else:
+            any_deletes += 1 # remove journals with no text
+
+        # remove any journals without a timestamp
+        if 'createdAt' not in json_dict:
+            any_deletes += 1
+        
         return any_deletes > 0
 
     def check_directory(self, site_id):
