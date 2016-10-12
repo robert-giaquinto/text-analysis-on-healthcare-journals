@@ -26,7 +26,7 @@ class JournalsManager(object):
     TODO:
     1. may want final result create by process_journals() to be a bag of words file and a vocabulary,
        instead of a flat file with the cleaned text?
-    
+
     2. it would be cleaner to have clean_method be an argument passed to
        the clean_journal() method of Journals, rather than a class variable
        of Journals. This would require passing function arguments in the
@@ -54,12 +54,12 @@ class JournalsManager(object):
         self.verbose = verbose
         if verbose:
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-        
+
         # make sure the keys_file is usable:
         self.init_keys_file(keys_file)
         # partition the keys file so there will be journals assigned to each worker:
         self.keys_list = self.partition_keys()
-        
+
     def init_keys_file(self, keys_file):
         """
         check is a keys file is given (and if it really exists), if not create one
@@ -71,11 +71,12 @@ class JournalsManager(object):
         Returns: Nothing, just makes sure that self.keys_file is a legitmate file we can use
         """
         if keys_file is None:
-            logger.info("No key's file given. Creating keys for all directories in sites_dir")
-            self.keys_file = "/home/srivbane/shared/caringbridge/data/clean_journals/all_keys.tsv"
-            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=False)
-            kc.collect_keys()
-        elif not os.path.isfile(keys_file):
+            raise ValueError("You must specify a name of a keys_file (it doesn't have to exist).")
+
+        if self.sites_dir is None:
+            raise ValueError("You must specify a valid sites_dir containing folders for each site in order to process them.")
+
+        if not os.path.isfile(keys_file):
             logger.info("The key's file given doesn't exists. Creating keys for all directories in sites_dir")
             self.keys_file = keys_file
             kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=False)
@@ -83,7 +84,7 @@ class JournalsManager(object):
         else:
             self.keys_file = keys_file
             logger.info("Keys file found, using the file you specified.")
-            
+
     def partition_keys(self, chunks_per_worker=10):
         """
         Partition the flat file of journal keys into enough parts
@@ -91,7 +92,7 @@ class JournalsManager(object):
 
         More partitions = smaller memory constraints. If you want to
         only hold 10% of the data in memory at a time set chunks_per_worker
-        to 10. For 20% of data memory at any time use chunks_per_worker=5. 
+        to 10. For 20% of data memory at any time use chunks_per_worker=5.
         """
         # perform some check that the keys_file is legitmate
 
@@ -99,7 +100,7 @@ class JournalsManager(object):
         n_partitions = self.n_workers * chunks_per_worker
         if n_partitions == 1:
             return [self.keys_file]
-        
+
         # write each partition of the keys to a new file
         keys_dir = '/'.join(self.keys_file.split('/')[0:-1])
         keys_prefix, keys_ext = os.path.splitext(self.keys_file.split('/')[-1])
@@ -125,7 +126,7 @@ class JournalsManager(object):
                     for i, journal in enumerate(j.stream):
                         journal = j.clean_journal(journal)
                         fout.write(' '.join(journal.body) + '\n')
-            
+
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
             # create instructions to pass to each worker
@@ -142,11 +143,11 @@ class JournalsManager(object):
                 for journal_collection in pool.imap(function_call, processes):
                     for journal in journal_collection:
                         fout.write(journal.siteId + '\t' + journal.userId + '\t' + journal.journalId + '\t' + journal.createdAt + '\t' + ' '.join(journal.body) + '\n')
-            
+
             pool.close()
 
 
-                    
+
 def main():
     parser = argparse.ArgumentParser(description='This program runs the Journals cleaning method in parallel and combines the results.')
     parser.add_argument('-i', '--sites_dir', type=str, help='Path to directory containing all the site directories.')
@@ -157,7 +158,7 @@ def main():
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.set_defaults(verbose=True)
     args = parser.parse_args()
-    
+
     print('journals_manager.py')
     print(args)
 
@@ -166,7 +167,7 @@ def main():
     jm.process_journals(outfile=args.outfile)
     end = time.time()
     print("Time to process the files:", end - start, "seconds")
-    
+
     print("Printing top rows of output:", "\n")
     with open(args.outfile, 'r') as fin:
         for i, line in enumerate(fin):
