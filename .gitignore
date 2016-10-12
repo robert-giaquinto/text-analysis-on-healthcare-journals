@@ -4,6 +4,8 @@
 *.pyc
 *.py~
 *.sh~
+*.log
+scripts/CB_*
 build/
 dist/
 text_analysis.egg-info/
