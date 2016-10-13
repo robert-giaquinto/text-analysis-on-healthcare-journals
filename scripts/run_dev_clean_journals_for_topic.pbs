@@ -1,5 +1,5 @@
 #!/bin/bash -l        
-#PBS -l walltime=1:00:00,nodes=1:ppn=16,mem=16gb 
+#PBS -l walltime=3:00:00,nodes=1:ppn=16,mem=22gb 
 #PBS -q lab
 #PBS -o clean_journals.log
 #PBS -m abe 
@@ -9,4 +9,5 @@ module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts
-python ~/text-analysis/src/clean_journal/journals_manager.py --sites_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --keys_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv --n_workers 16 --outfile /home/srivbane/shared/caringbridge/data/dev/clean_journals/cleaned_journals_for_topic.txt --log --clean_method topic
+rm -f /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv
+python ~/text-analysis/src/clean_journal/journals_manager.py --sites_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --keys_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv --n_workers 16 --outfile /home/srivbane/shared/caringbridge/data/dev/clean_journals/1M_journals_for_topic.txt --log --clean_method topic
