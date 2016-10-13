@@ -18,14 +18,14 @@ class JournalParsingWorker(object):
         Iterate through the file input_path, for each journal entry:
         1) create a directory for the site, if it doesn't already exist
         2) create a file in that directory for the journal entry
-        
+
         NOTE: Going back to this approach because the journal.json file
               isn't sorted in any meaningful way, so pulling out all the
               journal entries for one site at a time isn't possible.
-              
+
               Parse the data in the way this file works at least gets
               all the journals for each site in one location.
-              
+
               We can combine journal entries into a single file at the next
               step.
 
@@ -40,10 +40,10 @@ class JournalParsingWorker(object):
         """
         if verbose:
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-        
+
         self.input_path = input_path
         self.output_dir = output_dir
-        
+
         # which fields from the journal.json file should we keep (store them in output file names)
         self.fields = ['siteId', 'userId', 'journalId', 'createdAt']
         self.no_journalId_count = 0
@@ -59,7 +59,7 @@ class JournalParsingWorker(object):
             for i, line in enumerate(fin):
                 if i % 100000 == 0:
                     logger.info('Processing journal: ' + str(i))
-                
+
                 # parse the json
                 json_dict = json.loads(line)
 
@@ -69,20 +69,15 @@ class JournalParsingWorker(object):
                     num_skipped += 1
                     continue
 
-                # check if a site exists for the site_id, create directory if not
-                if 'siteId' not in json_dict:
-                    # might be safe to just continue here
-                    raise ValueError("No siteId found for:\n" + line)
+                # check if journalId doesn't exist, if not make up a unique id
+                if 'journalId' not in json_dict:
+                    json_dict['journalId'] = '-1'
+                    self.no_journalId_count += 1
 
                 # check if userId doesn't exist, if so make one up
                 if 'userId' not in json_dict:
-                    json_dict['userId'] = str(16000000 - self.no_userId_count)
+                    json_dict['userId'] = '-1'
                     self.no_userId_count += 1
-                    
-                # check if journalId doesn't exist, if not make up a unique id
-                if 'journalId' not in json_dict:
-                    json_dict['journalId'] = str(16000000 - self.no_journalId_count)
-                    self.no_journalId_count += 1
 
                 self.check_directory(json_dict['siteId'])
 
@@ -92,7 +87,7 @@ class JournalParsingWorker(object):
         logger.info("Had to make-up a userId for " + str(self.no_userId_count) + "journals.")
         logger.info("Had to make-up a journalId for " + str(self.no_journalId_count) + "journals.")
         return num_skipped
-                
+
     def check_skip(self, json_dict):
         """
         Check to see if this journal should be skipped.
@@ -103,7 +98,7 @@ class JournalParsingWorker(object):
 
         if 'isDraft' in json_dict:
             any_deletes += json_dict['isDraft'] == "1"
-        
+
         # is there a more efficient way to perform this check?
         if 'body' in json_dict:
             any_deletes += json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
@@ -113,7 +108,11 @@ class JournalParsingWorker(object):
         # remove any journals without a timestamp
         if 'createdAt' not in json_dict:
             any_deletes += 1
-        
+
+        # remove any journals without a timestamp
+        if 'siteId' not in json_dict:
+            any_deletes += 1
+
         return any_deletes > 0
 
     def check_directory(self, site_id):
@@ -123,7 +122,7 @@ class JournalParsingWorker(object):
                 os.makedirs(site_dir)
             except OSError:
                 pass
-    
+
     def save_journal(self, json_dict):
         """
         Save the desired fields of the json data to a tab delimited file
@@ -144,8 +143,8 @@ class JournalParsingWorker(object):
 
         with open(journal_file, 'wb') as f:
             f.write(text)
-                  
-        
+
+
 
 
 def main():
