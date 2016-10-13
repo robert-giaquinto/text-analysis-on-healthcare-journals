@@ -31,9 +31,9 @@ class Journals(object):
                          Use init_stream=False if you're running Journals in parallel.
                          To run in parallel  the initialization needs to occur later
                          (and not when the Journals instance is being declared).
-            clean_method: Can be either 'topic', 'sentiment', or 'none' to specify the
+            clean_method: Can be either 'topic', 'sentiment', 'survival', or 'none' to specify the
                        method of cleaning the journal text (either for topic modeling,
-                       sentiment analysis, or no cleaning, respectively).
+                       sentiment analysis, survival analysis, or no cleaning, respectively).
                        This only needs to be set if the cleaning is being initiated
                        from the JournalsManager class (i.e. for parallel processing)
                        otherwise, if you're just interacting with a Journals object in a
@@ -181,12 +181,45 @@ class Journals(object):
             return self.clean_journal_for_topic_modeling(journal)
         elif self.clean_method == "sentiment":
             raise ValueError("This method of cleaning the text data has not yet been implemented")
+        elif self.clean_method == "survival":
+            return self.clean_journal_for_survival_analysis(journal)
         elif self.clean_method == "none":
             return journal
         else:
             raise ValueError("clean_method class variable must be either topic, sentiment, or none")
 
+    def clean_journal_for_survival_analysis(self, journal):
+        """
+        Helper function to clean the journal for use in survival analysis
+        """
+        # Here's an example. Please change this to whatever works for you!
+
+        # step 1: clean up the text a little bit
+        # remove emojis / unicode characters
+        journal.body = unicodedata.normalize('NFKD', journal.body.decode('utf-8')).encode('ascii', 'ignore')
+        # remove html
+        journal.body = self.html.sub(" ", journal.body)
+        # remove extra white space (i.e. "\n\r\t\f\v ")
+        journal.body = re.sub(r"\s+", " ", journal.body)
+        # remove punctation and numbers
+        journal.body = self.punct.sub(" ", journal.body)
+
+
+        # step 2: create features form the text
+        # get number of words
+        word_count = len(journal.body.split())
+        # save word count in journal object
+        journal.features.append(word_count)
+
+        char_count = len(journal.body)
+        journal.features.append(char_count)
+
+        return journal
+
     def clean_journal_for_sentiment_analysis(self, journal):
+        """
+        Helper function to clean the journal for use in sentiment analysis
+        """
         # TODO
         return journal
 
@@ -321,6 +354,7 @@ class Journal(object):
         self.journalId = journalId
         self.createdAt = createdAt
         self.body = body
+        self.features = []
         self.tokenized = False
 
     def __repr__(self):

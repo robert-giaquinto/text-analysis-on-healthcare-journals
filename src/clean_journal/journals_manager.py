@@ -41,9 +41,9 @@ class JournalsManager(object):
                        entries. If this file doesn't exists, it will be created.
                        Example:
                        /home/srivbane/shared/caringbridge/data/cleaned_journals/all_keys.tsv
-            clean_method: Can be any one of ('topic', 'sentiment', 'none'), specifying
+            clean_method: Can be any one of ('topic', 'sentiment', 'survival', 'none'), specifying
                        the method of cleaning the text (either for topic modeling, sentiment
-                       analysis, or no cleaning, respectively
+                       analysis, survival analysis, or no cleaning, respectively
             n_workers: The number of nodes to use to process the data. Defaults to 1 node.
             verbose:   Should progress be printed to the log? True/False
         Returns: Nothing, just initializes the class instance.
@@ -125,7 +125,18 @@ class JournalsManager(object):
                     j = Journals(sites_dir=self.sites_dir, keys_file=keys_file, init_stream=True, clean_method=self.clean_method, verbose=self.verbose)
                     for i, journal in enumerate(j.stream):
                         journal = j.clean_journal(journal)
-                        fout.write(' '.join(journal.body) + '\n')
+
+                        # want to output journal keys regardless of cleaning method
+                        output = journal.siteId + '\t' + journal.userId + '\t' + journal.journalId + '\t' + journal.createdAt + '\t'
+
+                        if self.clean_method == "survival":
+                            # for survival analysis, don't save the text, just tab separate the features
+                            output += '\t'.join(journal.features)
+                        else:
+                            # for other tasks (like topic modeling) we want the journal body saved
+                            output += ' '.join(journal.body)
+
+                        fout.write(output + '\n')
 
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
@@ -142,7 +153,17 @@ class JournalsManager(object):
             with open(outfile, 'wb') as fout:
                 for journal_collection in pool.imap(function_call, processes):
                     for journal in journal_collection:
-                        fout.write(journal.siteId + '\t' + journal.userId + '\t' + journal.journalId + '\t' + journal.createdAt + '\t' + ' '.join(journal.body) + '\n')
+                        # want to output journal keys regardless of cleaning method
+                        output = journal.siteId + '\t' + journal.userId + '\t' + journal.journalId + '\t' + journal.createdAt + '\t'
+
+                        if self.clean_method == "survival":
+                            # for survival analysis, don't save the text, just tab separate the features
+                            output += '\t'.join(journal.features)
+                        else:
+                            # for other tasks (like topic modeling) we want the journal body saved
+                            output += ' '.join(journal.body)
+
+                        fout.write(output + '\n')
 
             pool.close()
 

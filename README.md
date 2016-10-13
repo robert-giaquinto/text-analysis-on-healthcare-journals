@@ -24,7 +24,7 @@
    ```bash
    virtualenv venv
    ```
-   
+
    To activate the virtualenv run:
 
    ```bash
@@ -59,10 +59,18 @@
    If you use other files from NLTK, add them to the list of things to download in the python file mentioned above.
 
 
+## Testing ##
+To run all the tests in the test suite `text-analysis/src/tests/` from the root `text-analysis` folder run:
+
+   ```bash
+   python -m unittest discover -v
+   ```
+
+
 ## Interacting with Journals ##
 See example_cleaning_journals.py for how to iterate over all the journals and run the journal's ``clean_journal()`` on each journal method.
 
-For an example of running this parallel, stay tuned an example is in the works...
+For an example of running this parallel check out the main() function in `text-analysis/src/clean_journal/journal_manager.py`.
 
 
 ## Project Structure ##
