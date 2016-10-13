@@ -73,7 +73,6 @@ class JournalParsingWorker(object):
                 if 'siteId' not in json_dict:
                     # might be safe to just continue here
                     raise ValueError("No siteId found for:\n" + line)
-                self.check_directory(json_dict['siteId'])
 
                 # check if userId doesn't exist, if so make one up
                 if 'userId' not in json_dict:
@@ -84,7 +83,9 @@ class JournalParsingWorker(object):
                 if 'journalId' not in json_dict:
                     json_dict['journalId'] = str(16000000 - self.no_journalId_count)
                     self.no_journalId_count += 1
-                
+
+                self.check_directory(json_dict['siteId'])
+
                 # open a new file for this journal entry and paste in the text
                 self.save_journal(json_dict)
 

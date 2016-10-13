@@ -4,6 +4,7 @@
 *.pyc
 *.py~
 *.sh~
+*.pbs~
 *.log
 scripts/CB_*
 build/
