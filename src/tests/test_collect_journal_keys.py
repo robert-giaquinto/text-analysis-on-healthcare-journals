@@ -28,13 +28,13 @@ class TestCollecter(unittest.TestCase):
             for filename in filenames:
                 os.remove(os.path.join(site_dir, filename))
             os.rmdir(site_dir)
-        
+
         os.remove('./test_collector_data/test_output.txt')
         os.rmdir('./test_collector_data')
-        
+
     def test_key_collector_count(self):
         self.create_test_data()
-        kc = KeyCollector(input_dir='./test_collector_data', output_filename='./test_collector_data/test_output.txt', verbose=False)
+        kc = KeyCollector(input_dir='./test_collector_data', output_filename='./test_collector_data/test_output.txt')
         kc.collect_keys()
 
         with open('./test_collector_data/test_output.txt', 'r') as fin:
@@ -47,7 +47,7 @@ class TestCollecter(unittest.TestCase):
 
     def test_key_collector_content(self):
         self.create_test_data()
-        kc = KeyCollector(input_dir='./test_collector_data', output_filename='./test_collector_data/test_output.txt', verbose=False)
+        kc = KeyCollector(input_dir='./test_collector_data', output_filename='./test_collector_data/test_output.txt')
         kc.collect_keys()
 
         actual = []
@@ -59,6 +59,7 @@ class TestCollecter(unittest.TestCase):
         for siteId in range(4):
             for journalId in range(4):
                 expected.append('\t'.join([str(siteId), '0', str(journalId), '20161010']))
-                
+
         self.assertEquals(actual, expected)
-        
+        self.remove_test_data()
+

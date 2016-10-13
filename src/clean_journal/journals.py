@@ -113,7 +113,7 @@ class Journals(object):
         elif not os.path.isfile(keys_file):
             logger.info("The key's file given doesn't exists. Creating keys for all directories in sites_dir")
             self.keys_file = keys_file
-            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file, verbose=False)
+            kc = KeyCollector(input_dir=self.sites_dir, output_filename=self.keys_file)
             kc.collect_keys()
         else:
             self.keys_file = keys_file

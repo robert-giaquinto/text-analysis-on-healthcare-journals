@@ -1,6 +1,8 @@
 from __future__ import division, print_function, absolute_import
 from math import ceil
 import os
+import subprocess
+from sys import platform as _platform
 
 # TODO should this be a file for holding general utilities functions?
 # in which case it shouldn't be in the parse journal file...
@@ -14,13 +16,13 @@ def split_file(filename, n_splits, infile_len=None):
         n_splits: how many shards should filename be broken into
         infile_len: how many lines are in the file, you can pass this in
                     to speed things up
-    Return: None, just create a directory in the same folder as 
+    Return: None, just create a directory in the same folder as
             the filename containing all the shards
     """
     if infile_len is None:
         infile_len = count_lines(filename)
 
-    # when copying lines of 'filename' to a new file, need to know when to begin copying the lines to a new file 
+    # when copying lines of 'filename' to a new file, need to know when to begin copying the lines to a new file
     lines_per_shard = int(ceil(1.0 * infile_len / n_splits))
     split_points = []
     line_ct = 0
@@ -34,7 +36,7 @@ def split_file(filename, n_splits, infile_len=None):
     shard_dir = os.path.join(file_dir, file_prefix + '_shards/')
     if not os.path.isdir(shard_dir):
         os.makedirs(shard_dir)
-    
+
     # loop through filename given, copy lines_per_shard lines to each new file
     outfile_ct = 1
     out_name = shard_dir + file_prefix + '_01_of_' + str(n_splits) + file_ext
@@ -55,7 +57,7 @@ def split_file(filename, n_splits, infile_len=None):
                 outfile.write(line)
     outfile.close()
     return filenames
-    
+
 
 def count_lines(filename):
     with open(filename, "r") as fin:
@@ -83,3 +85,43 @@ def _unpickle_method(func_name, obj, cls):
         else:
             break
     return func.__get__(obj, cls)
+
+def shuffle_file(filename, memory_avail="25%"):
+    """
+    Randomly shuffle a file using unix commands
+    Defaults to just usign 25% of available RAM so that this scales to big files
+    """
+    if _platform == "linux" or _platform == "linux2":
+       # linux
+       cmd = """/bin/bash -c "sort %s -R -o %s -S %s" """ % (filename, filename, memory_avail)
+       # or:
+       # cmd = "sort %s -R -o %s -S %s" % (filename, filename, memory_avail)"
+    elif _platform == "darwin":
+       # MAC OS X
+       cmd = "gsort %s -R -o %s -S %s" % (filename, filename, memory_avail)
+    elif _platform == "win32":
+       # Windows
+       raise WindowsError("I don't know how to randomly sort a file on windows.")
+
+
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception("Couldn't sort the file. Do you have GNU sort on this machine?")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
