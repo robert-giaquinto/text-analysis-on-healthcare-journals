@@ -159,7 +159,8 @@ def main():
     parser.add_argument('-j', '--journal_file', type=str, help='Full path to the journal file to extract tokens from.')
     parser.add_argument('-d', '--data_dir', type=str, help='Directory of where to save or load bag-of-words vocabulary files.')
     parser.add_argument('-k', '--keep_n', type=int, help='How many terms (max) to keep in the dictionary file.')
-    parser.add_argument('-n', '--num_test', type=int, default=0, help="Number of documents to hold out for the test set.")
+    parser.add_argument('--num_test', type=int, default=0, help="Number of documents to hold out for the test set.")
+    parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
     parser.set_defaults(verbose=True)
@@ -170,7 +171,7 @@ def main():
     print(args)
 
     start = time.time()
-    docs = Documents(journal_file = args.journal_file, num_test=args.num_test, data_dir=args.data_dir, rebuild=args.rebuild, keep_n=args.keep_n, verbose=args.verbose)
+    docs = Documents(journal_file = args.journal_file, num_test=args.num_test, data_dir=args.data_dir, rebuild=args.rebuild, keep_n=args.keep_n, num_docs=args.num_docs, verbose=args.verbose)
     docs.fit()
     end = time.time()
     print("Time to convert journal tokens into a BOW and vocabulary: " + str(end - start) + " seconds.")

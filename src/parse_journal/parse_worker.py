@@ -54,6 +54,7 @@ class JournalParsingWorker(object):
         Primary function to call, this does all the work
         """
         logger.info('Opening file: ' + self.input_path)
+        logger.info("this is a change to this file, let's see if it appears when i run the program!")
         num_skipped = 0
         with open(self.input_path, 'r') as fin:
             for i, line in enumerate(fin):
@@ -62,7 +63,7 @@ class JournalParsingWorker(object):
 
                 # parse the json
                 json_dict = json.loads(line)
-
+                
                 # put in checks to see if journal should be skipped (i.e. deleted=True, draft=True)
                 skip = self.check_skip(json_dict)
                 if skip:
@@ -73,7 +74,7 @@ class JournalParsingWorker(object):
                 if 'journalId' not in json_dict:
                     json_dict['journalId'] = '-1'
                     self.no_journalId_count += 1
-
+                    
                 # check if userId doesn't exist, if so make one up
                 if 'userId' not in json_dict:
                     json_dict['userId'] = '-1'
@@ -83,7 +84,7 @@ class JournalParsingWorker(object):
 
                 # open a new file for this journal entry and paste in the text
                 self.save_journal(json_dict)
-
+                
         logger.info("Had to make-up a userId for " + str(self.no_userId_count) + "journals.")
         logger.info("Had to make-up a journalId for " + str(self.no_journalId_count) + "journals.")
         return num_skipped

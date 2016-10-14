@@ -1,1 +1,0 @@
-python ~/text-analysis/src/topic_model/documents.py --journal_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/cleaned_journals.txt --data_dir /home/srivbane/shared/caringbridge/data/dev/topic_model --keep_n 25000 --rebuild --log

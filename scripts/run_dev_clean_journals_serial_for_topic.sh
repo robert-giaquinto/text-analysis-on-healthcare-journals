@@ -1,4 +1,4 @@
 rm -f /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv
-python ~/text-analysis/src/clean_journal/journals_manager.py -i /home/srivbane/shared/caringbridge/data/dev/parsed_json/ -k /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv -n 1 -o /home/srivbane/shared/caringbridge/data/dev/clean_journals/cleaned_journals.txt --log
+python -m src.clean_journal.journals_manager --sites_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --keys_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv --n_workers 1 --outfile /home/srivbane/shared/caringbridge/data/dev/clean_journals/dev_cleaned_journals_1worker.txt --log
 echo "Remove all keys shards"
 rm -rf /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys_shards

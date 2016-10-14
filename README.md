@@ -34,7 +34,7 @@
    To use automatically load this virtualenv everytime you login (recommended, if you aren't working on other MSI projects) add the previous line of code to your ~/.bashrc file.
 
 
-4. Installing the necessary packages.
+4. Installing the necessary python packages.
 
    A requirements.txt file, listing all packages used for this project is included in the repository. To install them first make sure your virtual environment is activated, then run the following line of code:
 
@@ -57,6 +57,19 @@
    ```
 
    If you use other files from NLTK, add them to the list of things to download in the python file mentioned above.
+
+
+6. Treat the python code as a package. To do this navigate to the `text-analysis` directory and run:
+
+   ```bash
+   python setup.py develop
+   ```
+
+
+## Running Programs ##
+Because of dependencies/imports between python files, the programs need to be run as modules with imports written as absolute imports. This means running the programs from the top `text-analysis` or `text-analysis/scripts` directory called as `python -m src.module_folder.python_file`.
+
+As a result, some of the programs may not be run like scripts (e.g. `python myfile.py`). It may be easiest to create a bash script in the `text-analysis/scripts` folder for anything you may run interactively. Programs that will be submitted to the MSI queue need to be [PBS](https://www.msi.umn.edu/content/job-submission-and-scheduling-pbs-scripts) files. In the `scripts` folder there are examples of how to run these.
 
 
 ## Testing ##
@@ -84,5 +97,9 @@ For an example of running this parallel check out the main() function in `text-a
 
        ```bash
        python setup.py test
+       ```
+       or
+       ```bash
+       python -m unittest discover -v
        ```
 

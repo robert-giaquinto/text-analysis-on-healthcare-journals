@@ -110,9 +110,9 @@ class TestWorker(unittest.TestCase):
                 if journalId < 2:
                     expected.append(str(siteId) + '_0_' + str(journalId) + '_1371412342000')
                 elif journalId == 2:
-                    expected.append(str(siteId) + '_0_' + str(16000000 - siteId) + '_1371412342000') # one missing journalId per site
+                    expected.append(str(siteId) + '_0_-1_1371412342000') # one missing journalId per site
                 elif journalId == 3:
-                    expected.append(str(siteId) + '_' + str(16000000 - siteId) + '_' + str(journalId) + '_1371412342000') # one missing user per site
+                    expected.append(str(siteId) + '_-1_' + str(journalId) + '_1371412342000') # one missing user per site
 
         self.remove_test_data()
         self.assertItemsEqual(expected, actual)
