@@ -17,13 +17,19 @@ class JournalCleaningWorker(object):
     """
     provides an iterator over journal entries
     """
-    def __init__(self, input_file=None, output_file=None, clean_method="none", verbose=False):
+    def __init__(self, input_file=None, output_file=None, clean_method="none", init_stream=True, verbose=False):
         """
         Args:
             input_file:   File of journals that have been parsed from json, assumes
                           file is tab seperated with the columns:
 
                           siteId    userID    journalId    createdAt    text
+
+            output_file:  File of where to save the cleaned journals. Will contain
+                          the same keys as the input file. If clean method is surival
+                          then the file won't contain text, instead it will have the features
+                          derived in the cleaning method for survival analysis. Otherwise,
+                          the output file will contain the cleaned up text.
 
             clean_method: Can be either 'topic', 'sentiment', 'survival', or 'none' to specify the
                        method of cleaning the journal text (either for topic modeling,
@@ -42,11 +48,10 @@ class JournalCleaningWorker(object):
         self.clean_method = clean_method
         self.verbose = verbose
 
-        if input_file is None:
-            self.stream = None
-            logger.info("No input file given, you won't be able to stream over a journal corpus, but you can access the clean_journal() method.")
-        else:
+        if input_file is not None and init_stream:
             self.stream = self.init_generator()
+        else:
+            self.stream = None
 
         if clean_method != "none":
             self.init_clean_journals()
@@ -118,7 +123,7 @@ class JournalCleaningWorker(object):
 
         with open(self.input_file, 'r') as fin:
             for line in fin:
-                siteId, userId, journalId, createdAt, text = line.replace('\n', '').strip().split('\t')
+                siteId, userId, journalId, createdAt, body = line.replace('\n', '').strip().split('\t')
                 journal = Journal(siteId=siteId, userId=userId, journalId=journalId, createdAt=createdAt, body=body)
                 yield journal
 

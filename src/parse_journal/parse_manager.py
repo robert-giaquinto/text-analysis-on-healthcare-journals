@@ -68,7 +68,7 @@ class JournalParsingManager(object):
         if len(input_files) == 1:
             logger.info("No parallel processing needed, only one file for one worker")
             worker = JournalParsingWorker(input_path=input_files[0], output_dir=output_dir, verbose=self.verbose)
-            num_skipped = worker.parse_file()
+            num_skipped, num_no_userId, num_no_journalId = worker.parse_file()
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
             # create instructions to pass to each worker
@@ -77,10 +77,13 @@ class JournalParsingManager(object):
             processes = [JournalParsingWorker(input_path=i, output_dir=o, verbose=v) for i, o, v in args_list]
             pool = mp.Pool(processes=self.n_workers)
             function_call = partial(JournalParsingWorker.parse_file)
-            num_skipped_list = pool.map(function_call, processes)
+            rval = pool.map(function_call, processes)
             pool.close()
-            num_skipped = sum(num_skipped_list)
-        logger.info("Total number of (deleted + draft) journal entries skipped: " + str(num_skipped))
+            num_skipped, num_no_userId, num_no_journalId = map(sum, zip(*rval))
+        
+        logger.info("Number of (deleted + draft + no create date + no siteId) journals skipped: " + str(num_skipped))
+        logger.info("Number of journals with missing userId (default value imputed): " + str(num_no_userId))
+        logger.info("Number of journals with missing journalId (default value imputed): " + str(num_no_journalId))
 
 
 def main():

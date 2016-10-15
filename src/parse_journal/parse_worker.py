@@ -46,8 +46,6 @@ class JournalParsingWorker(object):
 
         # which fields from the journal.json file should we keep (store them in output file names)
         self.fields = ['siteId', 'userId', 'journalId', 'createdAt']
-        self.no_journalId_count = 0
-        self.no_userId_count = 0
 
     def parse_file(self):
         """
@@ -57,6 +55,8 @@ class JournalParsingWorker(object):
 
         output_path = os.path.join(self.output_dir, 'parsed_' + os.path.split(self.input_path)[-1].replace(".json", ".txt"))
         num_skipped = 0
+        no_userId_count = 0
+        no_journalId_count = 0
         with open(self.input_path, 'r') as fin, open(output_path, 'wb') as fout:
             for line in fin:
                 # parse the json into a dictionary
@@ -69,7 +69,9 @@ class JournalParsingWorker(object):
                     continue
 
                 # replace missing keys, if necessary
-                json_dict = self.replace_missings(json_dict)
+                u, j = self.replace_missings(json_dict)
+                no_userId_count += u
+                no_journalId_count += j
 
                 # pull out the data we need from the text
                 keys = self.extract_keys(json_dict)
@@ -79,22 +81,25 @@ class JournalParsingWorker(object):
                 output = '\t'.join(keys) + '\t' + text + "\n"
                 fout.write(output)
 
-        logger.info("Had to make-up a userId for " + str(self.no_userId_count) + "journals.")
-        logger.info("Had to make-up a journalId for " + str(self.no_journalId_count) + "journals.")
-        return num_skipped
+        return num_skipped, no_userId_count, no_journalId_count
 
     def replace_missings(self, json_dict):
+        """
+        Replace missing values of json dict
+
+        Note: python uses pass by reference, so no need to return json_dict
+        """
         # check if journalId doesn't exist, if not make up a unique id
-        if 'journalId' not in json_dict:
+        no_journalId = 'journalId' not in json_dict
+        if no_journalId:
             json_dict['journalId'] = '-1'
-            self.no_journalId_count += 1
 
         # check if userId doesn't exist, if so make one up
-        if 'userId' not in json_dict:
+        no_userId = 'userId' not in json_dict
+        if no_userId:
             json_dict['userId'] = '-1'
-            self.no_userId_count += 1
 
-        return json_dict
+        return no_userId, no_journalId
 
     def check_skip(self, json_dict):
         """

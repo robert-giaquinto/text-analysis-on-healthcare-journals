@@ -65,10 +65,10 @@ class JournalCleaningManager(object):
         This recruits n_workers to work on the journal data
         """
         # get the list of shard files in the input_dir
-        input_files = os.listdir(self.input_dir)
+        input_files = [os.path.join(self.input_dir, fname) for fname in os.listdir(self.input_dir)]
 
         # clean an write all the journal shards to files
-        cleaned_shards = self.assign_tasks(input_files, output_files)
+        cleaned_shards = self.assign_tasks(input_files)
 
         # concatenate the resulting shards into a single big file
         self.concatenate_shards(cleaned_shards)
@@ -84,20 +84,20 @@ class JournalCleaningManager(object):
         This calls the workers in parallel (if requested)
         """
         # what should the resulting files be named?
-        output_files = os.path.join(self.output_dir, self.input_file.replace("parsed_", "cleaned_"))
+        fnames = [fname for fpath, fname in [os.path.split(i) for i in input_files]]
+        output_files = [os.path.join(self.output_dir, i.replace("parsed_", "cleaned_")) for i in fnames]
 
         if self.n_workers == 1 or len(input_files) == 1:
             logger.info("No parallel processing needed, only one worker requested.")
-            for input_file, output_file in zip(inpute_files, output_files):
-                worker = JournalCleaningWorker(input_file=input_file, output_file=output_file, clean_method=self.clean_method, verbose=self.verbose)
-                worker.parse_file()
+            for input_file, output_file in zip(input_files, output_files):
+                worker = JournalCleaningWorker(input_file=input_file, output_file=output_file, clean_method=self.clean_method, init_stream=True, verbose=self.verbose)
+                worker.clean_and_save()
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
             # create instructions to pass to each worker
-            n_shards = len(input_files)
-            args_list = zip(input_files, output_files, [self.clean_method]*n_shards, [self.verbose]*n_shards)
+            args_list = zip(input_files, output_files)
             # initialize worker instances
-            processes = [JournalCleaningWorker(input_path=i, output_dir=o, clean_method=c verbose=v) for i, o, c, v in args_list]
+            processes = [JournalCleaningWorker(input_file=i, output_file=o, clean_method=self.clean_method, init_stream=False, verbose=self.verbose) for i, o in args_list]
             # intialize multiprocessing pool and tell works to run the clean_and_save method
             pool = mp.Pool(processes=self.n_workers)
             function_call = partial(JournalCleaningWorker.clean_and_save)
