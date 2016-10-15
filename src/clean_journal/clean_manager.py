@@ -94,6 +94,9 @@ class JournalCleaningManager(object):
                 worker.clean_and_save()
         else:
             logger.info("Multiple files given, processing them with " + str(self.n_workers) + " workers.")
+            logger.info("Number of input files: " + str(len(input_files)))
+            logger.info("Number of output fies: " + str(len(output_files)))
+
             # create instructions to pass to each worker
             args_list = zip(input_files, output_files)
             # initialize worker instances

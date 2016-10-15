@@ -105,28 +105,39 @@ class JournalParsingWorker(object):
         """
         Check to see if this journal should be skipped.
         """
-        any_deletes = 0
-        if 'isDeleted' in json_dict:
-            any_deletes += json_dict['isDeleted'] == "1"
-
-        if 'isDraft' in json_dict:
-            any_deletes += json_dict['isDraft'] == "1"
-
-        # is there a more efficient way to perform this check?
-        if 'body' in json_dict:
-            any_deletes += json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
-        else:
-            any_deletes += 1 # remove journals with no text
-
         # remove any journals without a timestamp
         if 'createdAt' not in json_dict:
-            any_deletes += 1
+            return True
 
         # remove any journals without a timestamp
         if 'siteId' not in json_dict:
-            any_deletes += 1
+            return True
 
-        return any_deletes > 0
+        if 'isDeleted' in json_dict:
+            is_deleted = json_dict['isDeleted'] == "1"
+            if is_deleted:
+                return True
+
+        if 'isDraft' in json_dict:
+            is_draft = json_dict['isDraft'] == "1"
+            if is_draft:
+                return True
+
+        # is there a more efficient way to perform this check?
+        if 'body' in json_dict:
+            is_default = json_dict['body'].strip() == "This CaringBridge site was created just recently. Please visit again soon for a journal update."
+            if is_default:
+                return True
+            
+            no_text = len(re.sub("\s+", "", json_dict['body'])) == 0
+            if no_text:
+                return True
+        else:
+            # no body field
+            return True
+
+        # if all these tests pass, then return false to not skip
+        return False
 
     def extract_keys(self, json_dict):
         """

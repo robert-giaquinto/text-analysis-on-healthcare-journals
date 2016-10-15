@@ -316,7 +316,7 @@ class JournalCleaningWorker(object):
         if self.output_file is None:
             raise ValueError("Cannot process the journals unless you specify a file to save the results in.")
 
-
+        logger.info("Outputting: " + self.output_file)
         with open(self.output_file, 'wb') as fout:
             for journal in self.stream:
                 journal = self.clean_journal(journal)
