@@ -1,5 +1,10 @@
 # Text Analysis Research #
 
+
+## Introduction ##
+This repository is a shared project among researchers at the University of Minnesota investigating health journeys through the scrope of a large corpus of health journals written by patients and caregivers. We explore these texts with topic modeling, sentiment analysis, and other machine learning and natural language processing techniques.   
+
+
 ## Getting Started ##
 1. Clone the repo into your home directory:
 
@@ -10,7 +15,7 @@
 
 2. Setup python environment.
 
-   We're currently using the version of python contained in "python2/2.7.12_anaconda4.1.1" on MSI, because it contains some needed packages that are sometimes difficult to install. To use this as the default version on python on MSI add these two lines to your ~/.bashrc file:
+   We're currently using the version of python contained in "python2/2.7.12_anaconda4.1.1" on MSI (Minnesota Supercomputing Institute), because it contains some needed packages that are sometimes difficult to install. To use this as the default version on python on MSI add these two lines to your ~/.bashrc file:
 
    ```bash
    module unload python
@@ -59,7 +64,7 @@
    If you use other files from NLTK, add them to the list of things to download in the python file mentioned above.
 
 
-6. Treat the python code as a package. To do this navigate to the `text-analysis` directory and run:
+6. Treat the python code as a package. This is done to allow for absolute imports, which make it easy to load python files can be spread out in different folders. To do this navigate to the `text-analysis` directory and run:
 
    ```bash
    python setup.py develop
@@ -67,23 +72,37 @@
 
 
 ## Running Programs ##
-Because of dependencies/imports between python files, the programs need to be run as modules with imports written as absolute imports. This means running the programs from the top `text-analysis` or `text-analysis/scripts` directory called as `python -m src.module_folder.python_file`.
+It may be easiest to create bash scripts in `text-analysis/script` to run any programs you may run more than once. Programs that will be submitted to the MSI queue need to be [PBS](https://www.msi.umn.edu/content/job-submission-and-scheduling-pbs-scripts) files. In the `scripts` folder there are examples of how to run these.
 
-As a result, some of the programs may not be run like scripts (e.g. `python myfile.py`). It may be easiest to create a bash script in the `text-analysis/scripts` folder for anything you may run interactively. Programs that will be submitted to the MSI queue need to be [PBS](https://www.msi.umn.edu/content/job-submission-and-scheduling-pbs-scripts) files. In the `scripts` folder there are examples of how to run these.
+Because the python files are spread out over multiple directories, the programs use absolute imports to load other modules. This means running the programs with the `-m` flag, for example  `python -m src.module_folder.python_file`.
+
+Feel free to run any of the existing programs with the word 'dev' in the title, however the scripts to parse the giant json file and clean the text should only be run once because they may take a little time to run (i.e. `run_parse_journal.pbs`, `run_clean_journal_for_topic.pbs`, etc.).
 
 
 ## Testing ##
 To run all the tests in the test suite `text-analysis/src/tests/` from the root `text-analysis` folder run:
 
-   ```bash
-   python -m unittest discover -v
-   ```
+```bash
+python -m unittest discover -v
+```
+
+
 
 
 ## Interacting with Journals ##
-See example_cleaning_journals.py for how to iterate over all the journals and run the journal's ``clean_journal()`` on each journal method.
+For data containing journal keys and their original text see files in:
 
-For an example of running this parallel check out the main() function in `text-analysis/src/clean_journal/journal_manager.py`.
+```bash
+home/srivbane/shared/.../data/parsed_json/
+```
+
+Feel free to concatenate these file shards into one file if needed (i.e. `cat parsed_journal_01_of_48.txt ... parsed_journal_48_of_48.txt > all_parsed_journals.txt`).
+
+For all journal keys and the cleaned up text (all lowercase, lemmatized, no punctuation, etc.) see:
+
+```bash
+/.../data/clean_journals
+```
 
 
 ## Project Structure ##
