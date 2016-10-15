@@ -2,7 +2,7 @@
 
 
 ## Introduction ##
-This repository is a shared project among researchers at the University of Minnesota investigating health journeys through the scrope of a large corpus of health journals written by patients and caregivers. We explore these texts with topic modeling, sentiment analysis, and other machine learning and natural language processing techniques.   
+This repository is a shared project among researchers at the University of Minnesota investigating health journeys through the scope of a large corpus of health journals written by patients and caregivers. We explore these texts with topic modeling, sentiment analysis, and other machine learning and natural language processing techniques.   
 
 
 ## Getting Started ##
