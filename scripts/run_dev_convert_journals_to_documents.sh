@@ -1,0 +1,1 @@
+python -m src.topic_model.documents --journal_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/clean_journals_for_topic.txt --data_dir /home/srivbane/shared/caringbridge/data/dev/topic_model --keep_n 25000 --num_test 5000 --rebuild --log

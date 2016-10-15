@@ -8,5 +8,5 @@
 module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
-cd ~/text-analysis/scripts
-python ~/text-analysis/src/parse_journal/parse_manager.py --input_file /home/srivbane/shared/caringbridge/data/raw/journal.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json/ --n_workers 16 --num_lines 15327592 --log --clean
+cd ~/text-analysis
+python -m src.parse_journal.parse_manager --input_file /home/srivbane/shared/caringbridge/data/raw/journal.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json/ --n_workers 16 --num_lines 15327592 --log --clean

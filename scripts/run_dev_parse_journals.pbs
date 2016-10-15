@@ -1,12 +1,12 @@
 #!/bin/bash -l        
 #PBS -l walltime=1:00:00,nodes=1:ppn=16,mem=22gb 
 #PBS -q lab
-#PBS -o dev_parse_1m_journals.log
+#PBS -o dev_parse_journals.log
 #PBS -m abe 
 #PBS -M smit7982@umn.edu
-#PBS -N CB_DEV_PARSE_1M_JOURNALS
+#PBS -N CB_DEV_PARSE_JOURNALS
 module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis
-python -m src.parse_journal.parse_manager --input_file /home/srivbane/shared/caringbridge/data/dev/journal1M.json --output_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --n_workers 16 --num_lines 1000000 --log --clean
+python -m src.parse_journal.parse_manager --input_file /home/srivbane/shared/caringbridge/data/dev/journal.json --output_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --n_workers 16 --num_lines 1000 --log --clean

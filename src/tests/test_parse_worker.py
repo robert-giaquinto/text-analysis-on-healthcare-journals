@@ -7,12 +7,12 @@ from src.parse_journal.parse_worker import JournalParsingWorker
 import json
 
 
-class TestWorker(unittest.TestCase):
+class TestParsing(unittest.TestCase):
     def create_test_data(self):
         #create a file to load in and run tests on
-        if not os.path.exists("./test_worker_data"):
-            os.makedirs("./test_worker_data")
-        with open("./test_worker_data/test_journal.json", "wb") as f:
+        if not os.path.exists("./test_parse_data"):
+            os.makedirs("./test_parse_data")
+        with open("./test_parse_data/test_input.json", "wb") as f:
             for s in range(4):
                 for j in range(6):
                     if j == 0:
@@ -36,49 +36,50 @@ class TestWorker(unittest.TestCase):
                     f.write(line)
 
     def remove_test_data(self):
-        for siteId in range(4):
-            filenames = os.listdir('./test_worker_data/' + str(siteId))
-            for fname in filenames:
-                os.remove('./test_worker_data/' + str(siteId) + '/' + fname)
-            os.rmdir('./test_worker_data/' + str(siteId))
-        os.remove('./test_worker_data/test_journal.json')
-        os.rmdir('./test_worker_data')
+        os.remove('./test_parse_data/test_input.json')
+        os.remove('./test_parse_data/parsed_test_input.txt')
+        os.rmdir('./test_parse_data')
 
     def test_worker_check_skip(self):
         # create a few examples that should be skipped
-        text1 = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
+        isdraft = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
             "userId" : 0, "isDraft" : "1", "title" : "TITLE", "amps" : [],
             "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY.",
             "updatedAt" : { "$date" : 371412342000 }, "createdAt" : { "$date" : 1371412342000 } }"""
-        json_dict1 = json.loads(text1)
+        isdraft = json.loads(isdraft)
 
-        text2 = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
+        isdeleted = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
             "userId" : 0, "isDeleted" : "1", "title" : "TITLE", "amps" : [],
             "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY.",
             "updatedAt" : { "$date" : 371412342000 }, "createdAt" : { "$date" : 1371412342000 } }"""
-        json_dict2 = json.loads(text2)
+        isdeleted = json.loads(isdeleted)
 
-        text3 = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
-            "userId" : 0, "isDeleted" : "1", "title" : "TITLE", "amps" : [],
+        default = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
+            "userId" : 0, "isDeleted" : "0", "title" : "TITLE", "amps" : [],
             "platform" : "iphone", "ip" : "65.128.152.3", "body" : "This CaringBridge site was created just recently. Please visit again soon for a journal update.",
             "updatedAt" : { "$date" : 371412342000 }, "createdAt" : { "$date" : 1371412342000 } }"""
-        json_dict3 = json.loads(text3)
+        default = json.loads(default)
 
-        text4 = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
-            "userId" : 0, "isDeleted" : "1", "title" : "TITLE", "amps" : [],
+        nobody = """{ "_id" : { "$oid" : "x" }, "siteId" : 0, "journalId" : 0,
+            "userId" : 0, "isDeleted" : "0", "title" : "TITLE", "amps" : [],
             "platform" : "iphone", "ip" : "65.128.152.3",
             "updatedAt" : { "$date" : 371412342000 }, "createdAt" : { "$date" : 1371412342000 } }"""
-        json_dict4 = json.loads(text4)
+        nobody = json.loads(nobody)
 
-        text5 = """{"siteId" : 0, "journalId" : 0,
+        nodate = """{"siteId" : 0, "journalId" : 0,
+            "userId" : 0, "isDeleted" : "0", "title" : "TITLE", "amps" : [],
+            "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY." }"""
+        nodate = json.loads(nodate)
+
+        nositeid = """{"journalId" : 0,
             "userId" : 0, "isDeleted" : "1", "title" : "TITLE", "amps" : [],
             "platform" : "iphone", "ip" : "65.128.152.3", "body" : "BODY." }"""
-        json_dict5 = json.loads(text5)
+        nositeid = json.loads(nositeid)
 
         # is the number of skips equal to 5?
         worker = JournalParsingWorker(input_path=None, output_dir=None, verbose=False)
-        expected = worker.check_skip(json_dict1) + worker.check_skip(json_dict2) + worker.check_skip(json_dict3) + worker.check_skip(json_dict4) + worker.check_skip(json_dict5)
-        self.assertEqual(expected, 5)
+        expected = worker.check_skip(isdraft) + worker.check_skip(isdeleted) + worker.check_skip(default) + worker.check_skip(nobody) + worker.check_skip(nodate) + worker.check_skip(nositeid)
+        self.assertEqual(expected, 6)
 
     def test_worker_check_no_skip(self):
         # give some examples that shouldn't be skipped
@@ -98,44 +99,29 @@ class TestWorker(unittest.TestCase):
         expected = worker.check_skip(json_dict1) + worker.check_skip(json_dict2)
         self.assertEqual(expected, 0)
 
-    def test_worker_parse_file_filenames(self):
-        self.create_test_data()
-        worker = JournalParsingWorker(input_path='./test_worker_data/test_journal.json', output_dir='./test_worker_data/', verbose=False)
-        worker.parse_file()
-        actual = []
-        expected = []
-        for siteId in range(4):
-            actual += os.listdir('./test_worker_data/' + str(siteId))
-            for journalId in range(4):
-                if journalId < 2:
-                    expected.append(str(siteId) + '_0_' + str(journalId) + '_1371412342000')
-                elif journalId == 2:
-                    expected.append(str(siteId) + '_0_-1_1371412342000') # one missing journalId per site
-                elif journalId == 3:
-                    expected.append(str(siteId) + '_-1_' + str(journalId) + '_1371412342000') # one missing user per site
-
-        self.remove_test_data()
-        self.assertItemsEqual(expected, actual)
-
     def test_worker_parse_file_content(self):
         self.create_test_data()
-        worker = JournalParsingWorker(input_path='./test_worker_data/test_journal.json', output_dir='./test_worker_data/', verbose=False)
+        worker = JournalParsingWorker(input_path='./test_parse_data/test_input.json', output_dir='./test_parse_data/', verbose=False)
         worker.parse_file()
-        actual = []
+
         expected = []
         for siteId in range(4):
-            filenames = os.listdir('./test_worker_data/' + str(siteId))
-            for fname in filenames:
-                with open('./test_worker_data/' + str(siteId) + '/' + fname, 'r') as fin:
-                    actual.append(fin.readline().replace('\n', '').strip())
-
             for journalId in range(4):
                 if journalId == 0:
-                    expected.append('TITLE BODY' + str(siteId) + str(journalId))
-                else:
-                    expected.append('BODY' + str(siteId) + str(journalId))
+                    expected.append(str(siteId) + '\t0\t' + str(journalId) + '\t1371412342000\tTITLE BODY' + str(siteId) + str(journalId))
+                elif journalId == 1:
+                    expected.append(str(siteId) + '\t0\t' + str(journalId) + '\t1371412342000\tBODY'+ str(siteId) + str(journalId))
+                elif journalId == 2:
+                    expected.append(str(siteId) + '\t0\t-1' + '\t1371412342000\tBODY'+ str(siteId) + str(journalId))
+                elif journalId == 3:
+                    expected.append(str(siteId) + '\t-1\t' + str(journalId) + '\t1371412342000\tBODY'+ str(siteId) + str(journalId))
 
+        actual = []
+        with open('./test_parse_data/parsed_test_input.txt', 'r') as fin:
+            for line in fin:
+                actual.append(line.replace("\n", ""))
+
+        self.assertItemsEqual(actual, expected)
         self.remove_test_data()
-        self.assertItemsEqual(expected, actual)
 
 

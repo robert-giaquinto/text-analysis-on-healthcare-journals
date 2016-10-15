@@ -1,4 +1,1 @@
-rm -f /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv
-python -m src.clean_journal.journals_manager --sites_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --keys_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv --n_workers 4 --outfile /home/srivbane/shared/caringbridge/data/dev/clean_journals/cleaned_journals_for_survival.txt --log --clean_method survival
-echo "Remove all keys shards"
-rm -rf /home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys_shards
+python -m src.clean_journal.clean_manager --input_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json/ --output_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/cleaned_journals_for_survival.txt --clean_method survival --n_workers 4 --log

@@ -32,7 +32,7 @@ class JournalParsingWorker(object):
         Args:
             input_path: full filename of input file.
                 ex: /home/srivbane/shared/caringbridge/data/dev/journal.json
-            output_dir: directory where the site-directories should be created
+            output_dir: directory for where the parsed json shards should be saved
                 ex: /home/srivbane/shared/caringbridge/data/parsed_json/
             verbose: True/False where to print progress to the log file.
         Returns: Nothing, it simply writes each journal entry to a file in an
@@ -54,40 +54,47 @@ class JournalParsingWorker(object):
         Primary function to call, this does all the work
         """
         logger.info('Opening file: ' + self.input_path)
-        logger.info("this is a change to this file, let's see if it appears when i run the program!")
-        num_skipped = 0
-        with open(self.input_path, 'r') as fin:
-            for i, line in enumerate(fin):
-                if i % 100000 == 0:
-                    logger.info('Processing journal: ' + str(i))
 
-                # parse the json
+        output_path = os.path.join(self.output_dir, 'parsed_' + os.path.split(self.input_path)[-1].replace(".json", ".txt"))
+        num_skipped = 0
+        with open(self.input_path, 'r') as fin, open(output_path, 'wb') as fout:
+            for line in fin:
+                # parse the json into a dictionary
                 json_dict = json.loads(line)
-                
+
                 # put in checks to see if journal should be skipped (i.e. deleted=True, draft=True)
                 skip = self.check_skip(json_dict)
                 if skip:
                     num_skipped += 1
                     continue
 
-                # check if journalId doesn't exist, if not make up a unique id
-                if 'journalId' not in json_dict:
-                    json_dict['journalId'] = '-1'
-                    self.no_journalId_count += 1
-                    
-                # check if userId doesn't exist, if so make one up
-                if 'userId' not in json_dict:
-                    json_dict['userId'] = '-1'
-                    self.no_userId_count += 1
+                # replace missing keys, if necessary
+                json_dict = self.replace_missings(json_dict)
 
-                self.check_directory(json_dict['siteId'])
+                # pull out the data we need from the text
+                keys = self.extract_keys(json_dict)
+                text = self.extract_text(json_dict)
 
-                # open a new file for this journal entry and paste in the text
-                self.save_journal(json_dict)
-                
+                # write results to a file
+                output = '\t'.join(keys) + '\t' + text + "\n"
+                fout.write(output)
+
         logger.info("Had to make-up a userId for " + str(self.no_userId_count) + "journals.")
         logger.info("Had to make-up a journalId for " + str(self.no_journalId_count) + "journals.")
         return num_skipped
+
+    def replace_missings(self, json_dict):
+        # check if journalId doesn't exist, if not make up a unique id
+        if 'journalId' not in json_dict:
+            json_dict['journalId'] = '-1'
+            self.no_journalId_count += 1
+
+        # check if userId doesn't exist, if so make one up
+        if 'userId' not in json_dict:
+            json_dict['userId'] = '-1'
+            self.no_userId_count += 1
+
+        return json_dict
 
     def check_skip(self, json_dict):
         """
@@ -116,35 +123,28 @@ class JournalParsingWorker(object):
 
         return any_deletes > 0
 
-    def check_directory(self, site_id):
-        site_dir = os.path.join(self.output_dir, str(site_id))
-        if not os.path.isdir(site_dir):
-            try:
-                os.makedirs(site_dir)
-            except OSError:
-                pass
-
-    def save_journal(self, json_dict):
+    def extract_keys(self, json_dict):
         """
-        Save the desired fields of the json data to a tab delimited file
+        Pull out a list of all the keys to the journal
         """
-        filename_list = []
+        rval = []
         for field in self.fields:
             if field == 'createdAt':
-                filename_list.append(str(json_dict[field]['$date']))
+                rval.append(str(json_dict[field]['$date']))
             else:
-                filename_list.append(str(json_dict[field]))
-        output_filename = '_'.join(filename_list)
-        journal_file = os.path.join(self.output_dir, str(json_dict['siteId']), output_filename)
+                rval.append(str(json_dict[field]))
+        return rval
 
-        # write out the text int the journal entry, include title (if exists) at begining.
+    def extract_text(self, json_dict):
+        # write out the text in the journal entry, include title (if exists) at begining.
         text = json_dict['body'].encode('utf-8').strip()
         if 'title' in json_dict:
             text = json_dict['title'].encode('utf-8').strip() + ' ' + text
 
-        with open(journal_file, 'wb') as f:
-            f.write(text)
+        # remove all newlines so that the result can be written on a single line of a file
+        text = re.sub("\s+", ' ', text)
 
+        return text
 
 
 

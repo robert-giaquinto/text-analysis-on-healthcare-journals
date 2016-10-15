@@ -30,26 +30,26 @@ class JournalParsingManager(object):
             logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
         self.verbose = verbose
         self.n_workers = n_workers
-            
-    def check_file_splits(self, input_file, input_file_length=None):
+
+    def check_file_splits(self, input_file, input_file_length=None, shards_per_worker=3):
         # check if the file has already been split
         input_file_label = input_file.split('/')[-1].replace('.json', '')
         shard_dir = os.path.join('/'.join(input_file.split('/')[0:-1]), input_file_label + '_shards')
         file_exists = []
         shard_filenames = []
-        for i in range(self.n_workers):
-            shard_file = os.path.join(shard_dir, input_file_label + '_' + str(i+1).zfill(2) + '_of_' + str(self.n_workers) + '.json')
+        for i in range(shards_per_worker * self.n_workers):
+            shard_file = os.path.join(shard_dir, input_file_label + '_' + str(i+1).zfill(2) + '_of_' + str(shards_per_worker * self.n_workers) + '.json')
             shard_filenames.append(shard_file)
             file_exists.append(os.path.isfile(shard_file))
 
         if all(file_exists):
             logger.info('Looks like the file splits already exist, no need to re-split')
         else:
-            logger.info('Splitting the file now')
-            _ = split_file(input_file, self.n_workers, input_file_length)
+            logger.info('Splitting the file now, assigning multiple shards per worker')
+            _ = split_file(input_file, shards_per_worker * self.n_workers, input_file_length)
 
         return shard_filenames
-    
+
     def parse_files(self, input_file, output_dir, input_file_length=None):
         """
         Main function for processing the json files in parallel.
@@ -59,12 +59,12 @@ class JournalParsingManager(object):
             # no need to split file
             input_files = [input_file]
         else:
-            # split the file so there is work availabe for each worker
+            # split the file so there is work available for each worker
             start = time.time()
             input_files = self.check_file_splits(input_file, input_file_length)
             end = time.time()
             logger.info("Time to split the files into shards " + str(end - start))
-        
+
         if len(input_files) == 1:
             logger.info("No parallel processing needed, only one file for one worker")
             worker = JournalParsingWorker(input_path=input_files[0], output_dir=output_dir, verbose=self.verbose)
@@ -88,7 +88,7 @@ def main():
     parser = argparse.ArgumentParser(description='Main program for calling multiple workers to parse the journals.json file.')
     parser.add_argument('-i', '--input_file', type=str, help='Name of the journal file you want parsed..')
     parser.add_argument('--num_lines', type=int, help='Number of lines in the input_file. Specifying this can speed up performance of splitting the file into shards.')
-    parser.add_argument('-o', '--output_dir', type=str, help='Name of output directory for where to create site directories.')
+    parser.add_argument('-o', '--output_dir', type=str, help='Name of output directory for where to create file with all parsed journal shards.')
     parser.add_argument('-n', '--n_workers', type=int, help='How many processors to work on the journal file')
     parser.add_argument('--log', dest="verbose", action="store_true", help="Add this flag to have progress printed to the log.")
     parser.add_argument('--clean', dest='clean', action='store_true', help='Add this flag to remove all site directories before running the program')
@@ -104,7 +104,7 @@ def main():
 
         cmd = 'mkdir ' + args.output_dir
         subprocess.call(cmd, shell=True)
-        
+
         print("Remove shard files from previous run...")
         cmd = "rm -rf " + args.input_file.replace('.json', '_shards')
         subprocess.call(cmd, shell=True)
@@ -114,6 +114,6 @@ def main():
     manager.parse_files(input_file=args.input_file, output_dir=args.output_dir, input_file_length=args.num_lines)
     end = time.time()
     print("Time to parse the file:", end - start, "seconds.")
-    
+
 if __name__ == "__main__":
     main()

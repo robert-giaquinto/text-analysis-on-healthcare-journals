@@ -3,6 +3,8 @@ import os
 import argparse
 
 
+# DEPRECATED: NO LONGER USING THIS
+
 class KeyCollector(object):
     """
     collect the keys to all the journal files and store in a single flat file
