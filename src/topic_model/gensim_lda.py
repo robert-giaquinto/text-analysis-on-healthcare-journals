@@ -1,0 +1,389 @@
+from __future__ import division, print_function, absolute_import
+import argparse
+import os
+from math import ceil, log
+from gensim import models, utils
+import numpy as np
+import logging
+
+from src.topic_model.documents import Documents
+
+logger = logging.getLogger(__name__)
+gensim_logger = logging.getLogger('gensim.models.ldamodel')
+
+class NoGensimFilter(logging.Filter):
+    def filter(self, record):
+        useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
+        return not useless
+
+gensim_logger.addFilter(NoGensimFilter())
+
+class GensimLDA(object):
+    """
+    This is a wrapper around Gensim's LDA model.
+    Provides some new features, and allows for training until convergence
+    """
+    def __init__(self, docs, n_workers=1, verbose=False):
+        """
+        Args:
+            docs: a Documents object
+            n_workers: How many cores to use in training the LDA model.
+            verbose: Should progress be logged?
+        """
+        if verbose:
+            logging.basicConfig(format='%(name)s : %(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+            
+        self.n_workers = n_workers
+        self.docs = self._init_docs(docs)
+        
+        self.num_train = docs.num_train
+        self.num_test = docs.num_test
+        self.model = None
+        self.topic_terms = None
+        self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
+        
+        # dictionarys to hold word cooccurences (speeds up NPMI calculation)
+        self.doc_token2freq, self.token2freq = None, None
+
+    def _init_docs(self, docs):
+        """
+        Just check to make sure docs.vocab, docs.train_bow, and docs.test_bow are loaded
+        """
+        if docs.vocab is None:
+            docs.load_vocab()
+
+        if docs.train_bow is None or docs.test_bow is None:
+            docs.load_bow()
+
+        return docs
+        
+    def fit_partial(self, num_topics, perplexity_threshold, evals_per_pass, chunksize, max_passes=3):
+        """
+        Fit a single LDA model given some parameters.
+        
+        Args:
+            num_topics: How many topics should the LDA model find.
+            perplexity_threshold: Training will be considered converged once changes in
+                                  perplexity are less than perplexity_threshold.
+            evals_per_pass: How many times to evaluate perplexity per pass through the corpus?
+            chunksize: Number of documents to fit at a time (mini-batch size)
+        Returns: a dictionary containing a few performance statistics monitoring
+                 how well + quickly the model converged
+        """
+        convergence = {'perplexities': [], 'docs_seen': []}
+
+        logger.info("Initializing model.")
+        if self.n_workers == 1:
+            model = models.ldamodel.LdaModel(id2word=self.docs.vocab,
+                                             num_topics=num_topics,
+                                             chunksize=chunksize,
+                                             eval_every=None)
+        else:
+            model = models.ldamulticore.LdaMulticore(id2word=self.docs.vocab,
+                                                     num_topics=num_topics,
+                                                     workers=n_self.workers,
+                                                     chunksize=chunksize,
+                                                     eval_every=False)
+
+        converged = False
+        prev_perplexity, perplexity = None, None
+        docs_seen = 0
+        for p in range(max_passes):
+            logger.info("Pass: " + str(p))
+
+            # train on num_train / evals_per pass documents at the time, then evaluate perplexity
+            chunk_stream = utils.grouper(self.docs.train_bow, int(ceil(self.num_train / evals_per_pass)), as_numpy=False)
+            for i, chunk in enumerate(chunk_stream):
+                # bring document chunk  mini-batch into memory and update the model
+                chunk = list(chunk)
+                model.update(corpus=chunk, chunks_as_numpy=False)
+                docs_seen += len(chunk)
+                
+                # measure perplexity after training of the most recent chunk
+                perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
+                logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
+                convergence['perplexities'].append(perplexity)
+                convergence['docs_seen'].append(docs_seen)
+
+                # check for convergence
+                converged = prev_perplexity and abs(perplexity - prev_perplexity) < perplexity_threshold
+                if p > 0 and converged:
+                    logger.info("Converged after " + str(p) + "passes, and seeing " + str(docs_seen) + " documents.")
+                    logger.info("Convergence perplexity: " + str(perplexity))
+
+                prev_perplexity = perplexity
+            
+        return model, convergence
+
+    def fit(self, num_topics, chunksizes=None, perplexity_threshold=None, evals_per_pass=4):
+        """
+        Find the best LDA model for a range of num_topics and chunksizes
+        """
+        if isinstance(num_topics, int):
+            num_topics = [num_topics]
+        if not isinstance(num_topics, list):
+            raise ValueError("num_topics must either be a list of ints or a single int")
+
+        if isinstance(chunksizes, int):
+            chunksizes = [chunksizes]
+        if not isinstance(chunksizes, list):
+            raise ValueError("chunksizes must be either a list of ints or a single int")
+
+        model = None
+        best_perplexity = float("inf")
+        performance = []
+        for n in num_topics:
+            for c in chunksizes:
+                logger.info("Training LDA model with " + str(n) + "topics, and a mini-batch size of " + str(c) + ".")
+                model, convergence = self.fit_partial(num_topics=n,
+                                                      perplexity_threshold=perplexity_threshold,
+                                                      evals_per_pass=evals_per_pass,
+                                                      chunksize=c)
+                performance.append({'num_topics': n,
+                                    'chunksize': c,
+                                    'perplexities': convergence['perplexities'],
+                                    'docs_seen': convergence['docs_seen']})
+                perplexity = convergence['perplexities'][-1]
+                if perplexity < best_perplexity:
+                    logger.info("New best model found")
+                    self.model = model
+                    best_perplexity = perplexity
+
+        if self.topic_term_method == "weighted":
+            self.topic_terms = self._weighted_topic_terms()
+        else:
+            self.topic_terms = self._unweighted_topic_terms()
+        return performance
+
+    def _perplexity_score(self, model, X, total_docs=None):
+        """
+        Calculate perplexity on a set of documents X
+        """
+        if total_docs is None:
+            total_docs = sum(1 for _ in X)
+
+        corpus_words = sum(ct for doc in X for _, ct in doc)
+        subsample_ratio = 1.0 * total_docs / len(X)
+        perword_bound = model.bound(X, subsample_ratio=subsample_ratio) / (subsample_ratio * corpus_words)
+        perplexity = np.exp2(-perword_bound)
+        return perplexity
+
+    def topic_scores(self, performance_metric="NPMI"):
+        """
+        Calls appropriate scoring method based on argument performance_metric
+        Args:
+            performance_metric:
+        
+        Returns: a number a list of how each topic performed
+        """
+        if performance_metric == "NPMI":
+            return self._npmi_score()
+        elif performance_metric == "W2V":
+            raise ValueError("word2vec evaluation of topics not implemented yet")
+            #return self._w2v_score()
+        else:
+            raise ValueError("performance metric for scoring a set of topic terms must be either NPMI or W2V")
+
+    def _npmi_score(self):
+        """
+        Normalized pair-wise mutual information method of scoring
+        the quality of topics.
+        """
+        if self.model is None:
+            raise ValueError("You must call fit before you can score the quality of topics.")
+        
+        if self.doc_token2freq is None or self.token2freq is None:
+            self.token2freq, self.doc_token2freq = get_word_counts(self.docs.train_bow, self.docs.vocab)
+        
+        term_count = sum([ct for ct in self.token2freq.itervalues()])
+
+        epsilon = 0.00001
+        npmis = []
+        for topic in self.topic_terms:
+            summation_terms = []
+            for j, term_j in enumerate(topic[1:10]):
+                for term_i in topic[0:j]:
+                    # lookup individual word probabilities
+                    pr_j = 1.0 * self.token2freq[term_j] / term_count
+                    pr_i = 1.0 * self.token2freq[term_i] / term_count
+
+                    # find word co-occurrences. since documents are short ignore the "context window"
+                    cooccur_ct = 0
+                    for doc in self.doc_token2freq:
+                        if term_j in doc and term_i in doc:
+                            cooccur_ct += 1
+                    pr_j_and_i = 1.0 * cooccur_ct / len(self.doc_token2freq)
+                    numerator = log((pr_j_and_i + epsilon) / (pr_i * pr_j), 2)
+                    denominator = -1.0 * log(pr_j_and_i + epsilon, 2)
+                    summation_terms.append(numerator / denominator)
+            npmi = (1.0 / 45.0) * sum(summation_terms)
+            npmis.append(npmi)
+        return npmis
+
+    def save_topic_terms(self, output_filename, metric="NPMI"):
+        """
+        Save the top 10 words for each topic.
+        """
+        # return all topics for each method
+        if self.topic_term_method == "weighted":
+            terms = self._weighted_topic_terms()
+        else:
+            terms = self._unweighted_topic_terms()
+
+        # put the topic in order of highest to lowest based on a metric
+        scores = self.topic_scores(metric)
+        sorted_term_scores = sorted(zip(terms, scores), key=lambda x: x[1], reverse=True)
+        sorted_terms, sorted_scores  = zip(*sorted_term_scores)
+        sorted_id = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
+        self._write_topic_terms(sorted_terms, sorted_id, sorted_scores, output_filename)
+
+    def _write_topic_terms(self, topic_terms, topic_ids, scores, output_filename):
+        with open(output_filename, "wb") as f:
+            f.write("topic_id,topic_rank,score," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
+            topic_rank = 1
+            for terms, topic_id, score in zip(topic_terms, topic_ids, scores):
+                f.write(str(topic_id) + "," + str(topic_rank) + "," + str(score) + "," + ','.join(terms) + "\n")
+                topic_rank += 1
+                
+    def save_topic_words(self, output_filename, metric="NPMI"):
+        betas = self.get_topic_words()
+        vocab_words = [wd for key, wd in sorted(self.model.id2word.iteritems())]
+        topic_scores = self.topic_scores(metric)
+        with open(output_filename, "wb") as f:
+            f.write("topic_weight," + ','.join([w for w in vocab_words]) + "\n")
+            for topic_score, word_probs in zip(topic_scores, betas):
+                f.write(str(topic_score) + "," + ','.join([str(p) for p in word_probs]) + "\n")
+
+    def get_topic_words(self):
+        """
+        Get matrix with distribution of words over topics.
+        """
+        betas = []
+        for topic_id in range(self.model.num_topics):
+            topic = self.model.state.get_lambda()[topic_id]
+            topic = topic / topic.sum()  # normalize to probability dist
+            betas.append(topic)
+        return betas
+    
+    def _weighted_topic_terms(self):
+        """
+        Return top 10 topic terms from model using the term-score weighted
+        (Blei and Lafferty 2009, equation 3)
+
+        This is equivalent to using TF-IDF to determine the top terms
+
+        Args: None
+        Returns: list topics where each is a list of 10 terms
+        """
+        if self.model is None:
+            raise ValueError("Fit must be called to set the topics.")
+
+        # first, pull out probabilities for all words and topics
+        vocab = self.model.id2word
+        betas = self.get_topic_words()
+        vocab_words = np.array([wd for key, wd in sorted(vocab.iteritems())])
+        term_scores = self._term_scores(betas)
+
+        # select top 10 terms with highest term-score in each topic
+        top_terms = []
+        for topic in term_scores:
+            top_ten_indices = np.argpartition(topic, -10)[-10:][::-1]
+            top_ten_terms = vocab_words[top_ten_indices].tolist()
+            top_terms.append(top_ten_terms)
+        return top_terms
+
+    def _unweighted_topic_terms(self):
+        """
+        Just use the standard approach of selecting words with highest probability
+
+        Returns: list topics where each is a list of 10 terms
+        """
+        if self.model is None:
+            raise ValueError("Fit must be called to set the topics.")
+        # just extract the topics from based on probability score
+        raw_topics = self.model.show_topics(num_topics=-1, num_words=10, formatted=False)
+        rval = [[word for word, _ in topic] for _, topic in raw_topics]
+        return rval
+
+    def _term_scores(self, betas):
+        """
+        TF-IDF type calculation for determining top topic terms
+        from Blei and Lafferty 2009, equation 3
+
+        Args:
+            betas:
+
+        Returns:
+        """
+        denom = np.power(np.prod(betas, axis=0), 1.0 / len(betas))
+        if np.any(denom == 0):
+            denom +=  0.0000001
+        term2 = np.log(np.divide(betas, denom))
+        return np.multiply(betas, term2)
+
+
+def get_word_counts(x, vocab):
+    # create word frequency lookups for faster computing of NPMI scores
+    token2freq = {}
+    doc_token2freq = []
+    term_count = 0  # number of tokens in x
+    for doc in x:
+        term_freq_pairs = []
+        for term_id, f in doc:
+            freq = int(f)
+            term_count += freq
+            term = vocab[term_id]
+            term_freq_pairs.append((term, freq))
+            if term not in token2freq:
+                token2freq[term] = freq
+            else:
+                token2freq[term] += freq
+        doc_token2freq.append(dict(term_freq_pairs))
+    return token2freq, doc_token2freq
+    
+    
+def main():
+    parser = argparse.ArgumentParser(description='Wrapper around the gensim LDA model.')
+    parser.add_argument('-j', '--journal_file', type=str, help='Full path to the journal file to extract tokens from.')
+    parser.add_argument('-d', '--data_dir', type=str, help='Directory of where to save or load bag-of-words, vocabulary, and model performance files.')
+    parser.add_argument('-k', '--keep_n', type=int, help='How many terms (max) to keep in the dictionary file.')
+    parser.add_argument('--num_test', type=int, default=0, help="Number of documents to hold out for the test set.")
+    parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
+    parser.add_argument('--num_topics', type=int, nargs='+', default=[25], help="Number of topics to extract. Multiple arguments can be given to test a range of parameters.")
+    parser.add_argument('--n_workers', type=int, default=1, help="Number of cores to run on.")
+    parser.add_argument('--chunksizes', type=int, nargs='+', default=[1024], help="Mini-batch size for model training. Multiple arguments can be given to test a range of parameters.")
+    parser.add_argument('--threshold', type=float, default=0.01, help="A difference in perplexity between iterations of this amount will signal convergence.")
+    parser.add_argument('--evals_per_pass', type=int, default=4, help="How many times to check model perplexity per passes over the full dataset.")
+    parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
+    parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
+    parser.set_defaults(verbose=False)
+    parser.set_defaults(rebuild=False)
+    args = parser.parse_args()
+
+    print('gensim_lda.py')
+    print(args)
+
+    print("Creating a documents object")
+    docs = Documents(journal_file=args.journal_file,
+                     num_test=args.num_test,
+                     data_dir=args.data_dir,
+                     rebuild=args.rebuild,
+                     keep_n=args.keep_n,
+                     num_docs=args.num_docs,
+                     verbose=args.verbose)
+    docs.fit()
+
+    print("Build LDA model")
+    lda = GensimLDA(docs=docs, n_workers=args.n_workers, verbose=args.verbose)
+    performance = lda.fit(num_topics=args.num_topics,
+            chunksizes=args.chunksizes,
+            perplexity_threshold=args.threshold,
+            evals_per_pass=args.evals_per_pass)
+
+    print(performance)
+    lda.save_topic_words(os.path.join(args.data_dir, "word_topic_probabilities.txt"), metric="NPMI")
+    lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
+    
+    
+if __name__ == "__main__":
+    main()
