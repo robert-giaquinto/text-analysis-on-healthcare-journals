@@ -1,0 +1,11 @@
+#PBS -l walltime=5:00:00,nodes=1:ppn=1,mem=8gb
+#PBS -q lab
+#PBS -o parse_site.log
+#PBS -m abe
+#PBS -M aspxx061@umn.edu
+#PBS -N CB_PARSE_SITES
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/src/parse_site
+python parse_site.py --input_file /home/srivbane/shared/caringbridge/data/raw/site_scrubbed.json --output_dir /home/srivbane/shared/caringbridge/data/parsed_json
