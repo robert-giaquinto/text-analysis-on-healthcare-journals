@@ -60,9 +60,9 @@ class Documents(object):
         self.test_keys = None
         # name of file where MatrixMarket bag-of-words data is stored
         prefix = os.path.splitext(os.path.split(journal_file)[-1])[0]
-        self.train_file = os.path.join(self.data_dir, "train_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "terms.mm")
+        self.train_file = os.path.join(self.data_dir, "train_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "_terms.mm")
         if num_test > 0:
-            self.test_file = os.path.join(self.data_dir, "test_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "terms.mm")
+            self.test_file = os.path.join(self.data_dir, "test_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "_terms.mm")
         else:
             self.test_file = None
 
@@ -95,11 +95,11 @@ class Documents(object):
         self.num_train = self.num_docs - self.num_test
 
         # build the bag of words file
-        if self.rebuild or not os.path.isfile(self.mm_file):
+        if self.rebuild or not os.path.isfile(self.train_file):
             logger.info("Building a new bag-of-words file.")
             self.build_bow()
         else:
-            logger.info("Loading an existing bag-of-words file.")
+            logger.info("Loading an existing bag-of-words file: %s", self.train_file)
             self.load_bow()
 
     def build_vocab(self):
@@ -178,8 +178,8 @@ def main():
     parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
-    parser.set_defaults(verbose=True)
-    parser.set_defaults(rebuild=True)
+    parser.set_defaults(verbose=False)
+    parser.set_defaults(rebuild=False)
     args = parser.parse_args()
 
     print('documents.py')
