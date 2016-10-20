@@ -2,6 +2,10 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 
+"""
+Test file to generate some graphs describing health condition data
+"""
+
 input_file = "parsed_site_scrubbed.txt"
 categories = {}
 cancer = {}
