@@ -77,3 +77,11 @@ class TestJournalsTM(unittest.TestCase):
         expected = ['spaces', 'ok', 'yes', 'no', 'MORE', 'end']
         actual = jrnls.clean_journal_for_topic_modeling(j, as_ascii=False, rm_stopwords=False, lemmatize=False)
         self.assertItemsEqual(actual.body, expected)
+
+    def test_journal_clean_stopwords(self):
+        jrnls = JournalCleaningWorker(clean_method="topic")
+        body = 'a about above after again against ain all am an and any are aren as at be because been before being below between both but by can couldn d did didn do does doesn doing don down during each few for from further had hadn has hasn have haven having he her here hers herself him himself his how i if in into is isn it its itself just ll m ma me mightn more most mustn my myself needn no nor not now o of off on once only or other our ours ourselves out over own re s same shan she should shouldn so some such t than that the their theirs them themselves then there these they this those through to too under until up ve very was wasn we were weren what when where which while who whom why will with won wouldn y you your yours yourself yourselves'
+        j = Journal(body=body)
+        actual = jrnls.clean_journal_for_topic_modeling(j, as_ascii=False, lemmatize=False)
+        expected = 'above after again against before below down during further he her hers herself him himself his i if me my myself off on our ours ourselves over own she through under until up we what when where who whom why you your yours yourself yourselves'.split()
+        self.assertItemsEqual(actual.body, expected)
