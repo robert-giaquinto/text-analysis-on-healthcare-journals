@@ -9,6 +9,7 @@ import logging
 from src.topic_model.documents import Documents
 from src.utilities import pickle_it
 
+
 logger = logging.getLogger(__name__)
 gensim_logger = logging.getLogger('gensim.models.ldamodel')
 
@@ -201,7 +202,7 @@ class GensimLDA(object):
         """
         if self.model is None:
             raise ValueError("You must call fit before you can score the quality of topics.")
-
+        
         if self.doc_token2freq is None or self.token2freq is None:
             self.token2freq, self.doc_token2freq = get_word_counts(self.docs.train_bow, self.docs.vocab)
 
@@ -440,6 +441,7 @@ def main():
 
     # save trained model to file
     pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_total_" + str(lda.num_docs) + "_topics_" + str(lda.num_topics) + ".p"))
+
 
 if __name__ == "__main__":
     main()
