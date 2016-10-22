@@ -148,11 +148,13 @@ class GensimLDA(object):
                     logger.info("New best model found")
                     self.model = model
                     best_perplexity = perplexity
-
+        
+        # set topic terms
         if self.topic_term_method == "weighted":
             self.topic_terms = self._weighted_topic_terms()
         else:
             self.topic_terms = self._unweighted_topic_terms()
+        
         return performance
 
     def _perplexity_score(self, model, X, total_docs=None):
@@ -188,6 +190,10 @@ class GensimLDA(object):
         """
         Normalized pair-wise mutual information method of scoring
         the quality of topics.
+        Note: this is not being calculated in the traditional way. This doesn't
+              use context windows for calculating word co-occurences, rather
+              words count as co-occuring if this both appear in the document, the
+              denominator in this probability is how many documents there are.
         """
         if self.model is None:
             raise ValueError("You must call fit before you can score the quality of topics.")
@@ -207,12 +213,12 @@ class GensimLDA(object):
                     pr_j = 1.0 * self.token2freq[term_j] / term_count
                     pr_i = 1.0 * self.token2freq[term_i] / term_count
 
-                    # find word co-occurrences. since documents are short ignore the "context window"
+                    docs_with_cooccur = 0
                     cooccur_ct = 0
                     for doc in self.doc_token2freq:
                         if term_j in doc and term_i in doc:
-                            cooccur_ct += 1
-                    pr_j_and_i = 1.0 * cooccur_ct / len(self.doc_token2freq)
+                            docs_with_cooccur += 1
+                    pr_j_and_i = 1.0 * docs_with_cooccur / len(self.doc_token2freq)
                     numerator = log((pr_j_and_i + epsilon) / (pr_i * pr_j), 2)
                     denominator = -1.0 * log(pr_j_and_i + epsilon, 2)
                     summation_terms.append(numerator / denominator)
@@ -224,29 +230,28 @@ class GensimLDA(object):
         """
         Save the top 10 words for each topic.
         """
-        # return all topics for each method
-        if self.topic_term_method == "weighted":
-            terms = self._weighted_topic_terms()
-        else:
-            terms = self._unweighted_topic_terms()
+        if self.topic_terms is None:
+            raise ValueError("Topic terms not defined, call fit first")
 
         # put the topic in order of highest to lowest based on a metric
         scores = self.topic_scores(metric)
         sorted_term_scores = sorted(zip(terms, scores), key=lambda x: x[1], reverse=True)
         sorted_terms, sorted_scores  = zip(*sorted_term_scores)
         sorted_id = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
-        self._write_topic_terms(sorted_terms, sorted_id, sorted_scores, output_filename)
-
-    def _write_topic_terms(self, topic_terms, topic_ids, scores, output_filename):
+        # write to file, order topics by ranking
         with open(output_filename, "wb") as f:
             f.write("topic_id,topic_rank,score," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
             topic_rank = 1
-            for terms, topic_id, score in zip(topic_terms, topic_ids, scores):
+            for terms, topic_id, score in zip(sorted_terms, sorted_ids, sorted_scores):
                 f.write(str(topic_id) + "," + str(topic_rank) + "," + str(score) + "," + ','.join(terms) + "\n")
                 topic_rank += 1
-                
-    def save_topic_words(self, output_filename, metric="NPMI"):
-        betas = self.get_topic_words()
+        
+    def save_word_topic_probs(self, output_filename, metric="NPMI"):
+        """
+        Save the beta parameter (probability of each word belonging to each topic
+        to a file.
+        """
+        betas = self.get_beta()
         vocab_words = [wd for key, wd in sorted(self.model.id2word.iteritems())]
         topic_scores = self.topic_scores(metric)
         with open(output_filename, "wb") as f:
@@ -254,7 +259,33 @@ class GensimLDA(object):
             for topic_score, word_probs in zip(topic_scores, betas):
                 f.write(str(topic_score) + "," + ','.join([str(p) for p in word_probs]) + "\n")
 
-    def get_topic_words(self):
+    def save_doc_topic_probs(self, bow_generator, keys_generator, output_filename):
+        """
+        Save the probability distribution of topics over each of the documents
+        Args:
+            bow_generator: a bag-of-words generator. User either:
+                           from gensim import corpora
+                           bow_generator = corpora.MmCorpus("my_bag_of_words.mm")
+                           or:
+                           docs = Documents(...)
+                           bow_generator = docs.train_bow # or bow = docs.test_bow
+            keys_generator: a generator that return one list of keys to each document
+                            at a time. Best to use:
+                            docs = Documents(...)
+                            keys_generator = docs.train_keys
+                            or:
+                            keys_generator = docs.test_keys
+            output_filename: name of file to write results to.
+        Returns: Nothing, results written to file
+        """
+        with open(output_filename, "wb") as fout:
+            chunk_stream = utils.grouper(bow_generator, chunksize=25000, as_numpy=False)
+            for chunk in chunk_stream:
+                topic_dist = self._compute_topic_dist(list(chunk))
+                for doc_keys, td in zip(keys_generator, topic_dist):
+                    fout.write(','.join(doc_keys) + "," + ','.join([str(prob) for prob in td]) + "\n")
+
+    def get_beta(self):
         """
         Get matrix with distribution of words over topics.
         """
@@ -264,6 +295,24 @@ class GensimLDA(object):
             topic = topic / topic.sum()  # normalize to probability dist
             betas.append(topic)
         return betas
+
+    def get_theta(self, bows):
+        """
+        Theta is the parameter for topic distribution over each document
+        This can be a little faster than gensim's native 1 document at a time approach to inference
+        :param bows: should be a list of bag of words vectors loaded into memory
+        :return:
+        """
+        gamma, _ = self.model.inference(bows, collect_sstats=False)
+        # normalize
+        theta = []
+        for g in gamma:
+            topic_dist = g / sum(g)
+            theta.append(topic_dist)
+        if len(theta) == 1:
+            return theta[0]
+        else:
+            return theta
     
     def _weighted_topic_terms(self):
         """
@@ -280,7 +329,7 @@ class GensimLDA(object):
 
         # first, pull out probabilities for all words and topics
         vocab = self.model.id2word
-        betas = self.get_topic_words()
+        betas = self.get_beta()
         vocab_words = np.array([wd for key, wd in sorted(vocab.iteritems())])
         term_scores = self._term_scores(betas)
 
@@ -291,19 +340,6 @@ class GensimLDA(object):
             top_ten_terms = vocab_words[top_ten_indices].tolist()
             top_terms.append(top_ten_terms)
         return top_terms
-
-    def _unweighted_topic_terms(self):
-        """
-        Just use the standard approach of selecting words with highest probability
-
-        Returns: list topics where each is a list of 10 terms
-        """
-        if self.model is None:
-            raise ValueError("Fit must be called to set the topics.")
-        # just extract the topics from based on probability score
-        raw_topics = self.model.show_topics(num_topics=-1, num_words=10, formatted=False)
-        rval = [[word for word, _ in topic] for _, topic in raw_topics]
-        return rval
 
     def _term_scores(self, betas):
         """
@@ -320,6 +356,19 @@ class GensimLDA(object):
             denom +=  0.0000001
         term2 = np.log(np.divide(betas, denom))
         return np.multiply(betas, term2)
+
+    def _unweighted_topic_terms(self):
+        """
+        Just use the standard approach of selecting words with highest probability
+
+        Returns: list topics where each is a list of 10 terms
+        """
+        if self.model is None:
+            raise ValueError("Fit must be called to set the topics.")
+        # just extract the topics from based on probability score
+        raw_topics = self.model.show_topics(num_topics=-1, num_words=10, formatted=False)
+        rval = [[word for word, _ in topic] for _, topic in raw_topics]
+        return rval
 
 
 def get_word_counts(x, vocab):
@@ -381,9 +430,12 @@ def main():
             evals_per_pass=args.evals_per_pass)
 
     print(performance)
-    lda.save_topic_words(os.path.join(args.data_dir, "word_topic_probabilities.txt"), metric="NPMI")
+    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric="NPMI")
     lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
-    
+    lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+
+    # save trained model to file
+    pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_total_" + str(lda.num_docs) + "_topics_" + str(lda.num_topics) + ".p"))
     
 if __name__ == "__main__":
     main()
