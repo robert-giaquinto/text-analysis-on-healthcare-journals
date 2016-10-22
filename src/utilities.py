@@ -110,7 +110,17 @@ def shuffle_file(filename, memory_avail="25%"):
         raise Exception("Couldn't sort the file. Do you have GNU sort on this machine?")
 
 
+def pickle_it(obj, filepath):
+    outfile = open(filepath, "wb")
+    pickle.dump(obj, outfile)
+    outfile.close()
 
+
+def unpickle_it(filepath):
+    infile = open(filepath, "rb")
+    obj = pickle.load(infile)
+    infile.close()
+    return obj
 
 
 
