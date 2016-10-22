@@ -7,6 +7,7 @@ import numpy as np
 import logging
 
 from src.topic_model.documents import Documents
+from src.utilities import pickle_it
 
 logger = logging.getLogger(__name__)
 gensim_logger = logging.getLogger('gensim.models.ldamodel')
