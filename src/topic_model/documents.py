@@ -7,6 +7,7 @@ import logging
 
 from src.utilities import count_lines, shuffle_file, split_file
 from src.topic_model.journal_tokens import JournalTokens
+from src.topic_model.journal_keys import JournalKeys
 
 logger = logging.getLogger(__name__)
 
