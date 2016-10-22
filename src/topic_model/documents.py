@@ -53,6 +53,11 @@ class Documents(object):
         # init generator over the bag of words files for training and testing
         self.train_bow = None
         self.test_bow = None
+        # init keys generator corresponding to BOW file for training and test
+        self.train_shard_file = None
+        self.train_keys = None
+        self.test_shard_file = None
+        self.test_keys = None
         # name of file where MatrixMarket bag-of-words data is stored
         prefix = os.path.splitext(os.path.split(journal_file)[-1])[0]
         self.train_file = os.path.join(self.data_dir, "train_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "terms.mm")
@@ -118,14 +123,16 @@ class Documents(object):
 
             logger.info("Splitting the file into train and test")
             # this is a hacky way to do this (split_file wasn't intended to be used this way), but should work
-            train_shard, test_shard = split_file(self.journal_file, 2, infile_len=self.num_train * 2)
+            self.train_shard_file, self.test_shard_file = split_file(self.journal_file,
+                2,
+                infile_len=self.num_train * 2)
 
-            test_corpus = self._bow_generator(test_shard)
+            test_corpus = self._bow_generator(self.test_shard_file)
             corpora.MmCorpus.serialize(fname=self.test_file, corpus=test_corpus)
         else:
-            train_shard = self.journal_file
+            self.train_shard_file = self.journal_file
 
-        train_corpus = self._bow_generator(train_shard)
+        train_corpus = self._bow_generator(self.train_shard_file)
         corpora.MmCorpus.serialize(fname=self.train_file, corpus=train_corpus)
 
 
@@ -138,6 +145,14 @@ class Documents(object):
 
         for tokens in JournalTokens(filename=filename):
             yield self.vocab.doc2bow(tokens)
+
+    def load_keys(self):
+        """
+        Load the keys associated with each element in BOW generators
+        """
+        self.train_keys = (keys for keys in JournalKeys(filename=self.train_shard_file))
+        if self.test_shard_file is not None:
+            self.test_keys = (keys for keys in JournalKeys(filename=self.test_shard_file))
 
     def load_bow(self):
         """
