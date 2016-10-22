@@ -33,16 +33,16 @@ class GensimLDA(object):
         """
         if verbose:
             logging.basicConfig(format='%(name)s : %(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-            
+
         self.n_workers = n_workers
         self.docs = self._init_docs(docs)
-        
+
         self.num_train = docs.num_train
         self.num_test = docs.num_test
         self.model = None
         self.topic_terms = None
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
-        
+
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
 
@@ -56,12 +56,15 @@ class GensimLDA(object):
         if docs.train_bow is None or docs.test_bow is None:
             docs.load_bow()
 
+        if docs.train_keys is none or docs.test_keys is None:
+            docs.load_keys()
+
         return docs
-        
+
     def fit_partial(self, num_topics, perplexity_threshold, evals_per_pass, chunksize, max_passes=3):
         """
         Fit a single LDA model given some parameters.
-        
+
         Args:
             num_topics: How many topics should the LDA model find.
             perplexity_threshold: Training will be considered converged once changes in
@@ -99,7 +102,7 @@ class GensimLDA(object):
                 chunk = list(chunk)
                 model.update(corpus=chunk, chunks_as_numpy=False)
                 docs_seen += len(chunk)
-                
+
                 # measure perplexity after training of the most recent chunk
                 perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
                 logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
@@ -113,7 +116,7 @@ class GensimLDA(object):
                     logger.info("Convergence perplexity: " + str(perplexity))
 
                 prev_perplexity = perplexity
-            
+
         return model, convergence
 
     def fit(self, num_topics, chunksizes=None, perplexity_threshold=None, evals_per_pass=4):
@@ -149,13 +152,13 @@ class GensimLDA(object):
                     logger.info("New best model found")
                     self.model = model
                     best_perplexity = perplexity
-        
+
         # set topic terms
         if self.topic_term_method == "weighted":
             self.topic_terms = self._weighted_topic_terms()
         else:
             self.topic_terms = self._unweighted_topic_terms()
-        
+
         return performance
 
     def _perplexity_score(self, model, X, total_docs=None):
@@ -176,7 +179,7 @@ class GensimLDA(object):
         Calls appropriate scoring method based on argument performance_metric
         Args:
             performance_metric:
-        
+
         Returns: a number a list of how each topic performed
         """
         if performance_metric == "NPMI":
@@ -198,10 +201,10 @@ class GensimLDA(object):
         """
         if self.model is None:
             raise ValueError("You must call fit before you can score the quality of topics.")
-        
+
         if self.doc_token2freq is None or self.token2freq is None:
             self.token2freq, self.doc_token2freq = get_word_counts(self.docs.train_bow, self.docs.vocab)
-        
+
         term_count = sum([ct for ct in self.token2freq.itervalues()])
 
         epsilon = 0.00001
@@ -246,7 +249,7 @@ class GensimLDA(object):
             for terms, topic_id, score in zip(sorted_terms, sorted_ids, sorted_scores):
                 f.write(str(topic_id) + "," + str(topic_rank) + "," + str(score) + "," + ','.join(terms) + "\n")
                 topic_rank += 1
-        
+
     def save_word_topic_probs(self, output_filename, metric="NPMI"):
         """
         Save the beta parameter (probability of each word belonging to each topic
@@ -314,7 +317,7 @@ class GensimLDA(object):
             return theta[0]
         else:
             return theta
-    
+
     def _weighted_topic_terms(self):
         """
         Return top 10 topic terms from model using the term-score weighted
@@ -390,8 +393,8 @@ def get_word_counts(x, vocab):
                 token2freq[term] += freq
         doc_token2freq.append(dict(term_freq_pairs))
     return token2freq, doc_token2freq
-    
-    
+
+
 def main():
     parser = argparse.ArgumentParser(description='Wrapper around the gensim LDA model.')
     parser.add_argument('-j', '--journal_file', type=str, help='Full path to the journal file to extract tokens from.')
@@ -437,6 +440,6 @@ def main():
 
     # save trained model to file
     pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_total_" + str(lda.num_docs) + "_topics_" + str(lda.num_topics) + ".p"))
-    
+
 if __name__ == "__main__":
     main()
