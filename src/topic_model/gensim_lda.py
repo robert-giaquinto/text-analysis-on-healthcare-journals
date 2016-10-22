@@ -81,7 +81,7 @@ class GensimLDA(object):
         else:
             model = models.ldamulticore.LdaMulticore(id2word=self.docs.vocab,
                                                      num_topics=num_topics,
-                                                     workers=n_self.workers,
+                                                     workers=self.n_workers,
                                                      chunksize=chunksize,
                                                      eval_every=False)
 
