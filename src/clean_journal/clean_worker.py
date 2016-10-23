@@ -287,7 +287,7 @@ class JournalCleaningWorker(object):
 
         # remove stopwords
         if rm_stopwords:
-            journal.body = [w for w in journal.body if w not in self.stopword_set]
+            journal.body = [w for w in journal.body if w.lower() not in self.stopword_set]
 
         # lemmatize the remaining tokens
         # convert to lowercase, would like to do this earlier, but might get better lemmatizing results
