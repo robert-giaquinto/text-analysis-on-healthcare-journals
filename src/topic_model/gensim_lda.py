@@ -10,15 +10,22 @@ from src.topic_model.documents import Documents
 from src.utilities import pickle_it
 
 
+# initialize logging
 logger = logging.getLogger(__name__)
-gensim_logger = logging.getLogger('gensim.models.ldamodel')
 
+gensim_logger1 = logging.getLogger('gensim.models.ldamodel')
+gensim_logger2 = logging.getLogger('gensim.models.ldamulticore')
+    
+# filter out the un-needed  gensim logging messages
 class NoGensimFilter(logging.Filter):
     def filter(self, record):
         useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
         return not useless
+    
+gensim_logger1.addFilter(NoGensimFilter())
+gensim_logger2.addFilter(NoGensimFilter())
 
-gensim_logger.addFilter(NoGensimFilter())
+
 
 class GensimLDA(object):
     """
@@ -43,7 +50,8 @@ class GensimLDA(object):
         self.model = None
         self.topic_terms = None
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
-
+        self.num_topics = None
+        
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
 
@@ -57,7 +65,7 @@ class GensimLDA(object):
         if docs.train_bow is None or docs.test_bow is None:
             docs.load_bow()
 
-        if docs.train_keys is none or docs.test_keys is None:
+        if docs.train_keys is None or docs.test_keys is None:
             docs.load_keys()
 
         return docs
@@ -159,7 +167,9 @@ class GensimLDA(object):
             self.topic_terms = self._weighted_topic_terms()
         else:
             self.topic_terms = self._unweighted_topic_terms()
-
+        # save best number of topics found
+        self.num_topics = self.model.num_topics
+            
         return performance
 
     def _perplexity_score(self, model, X, total_docs=None):
@@ -240,9 +250,9 @@ class GensimLDA(object):
 
         # put the topic in order of highest to lowest based on a metric
         scores = self.topic_scores(metric)
-        sorted_term_scores = sorted(zip(terms, scores), key=lambda x: x[1], reverse=True)
+        sorted_term_scores = sorted(zip(self.topic_terms, scores), key=lambda x: x[1], reverse=True)
         sorted_terms, sorted_scores  = zip(*sorted_term_scores)
-        sorted_id = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
+        sorted_ids = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
         # write to file, order topics by ranking
         with open(output_filename, "wb") as f:
             f.write("topic_id,topic_rank,score," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
@@ -286,7 +296,7 @@ class GensimLDA(object):
         with open(output_filename, "wb") as fout:
             chunk_stream = utils.grouper(bow_generator, chunksize=25000, as_numpy=False)
             for chunk in chunk_stream:
-                topic_dist = self._compute_topic_dist(list(chunk))
+                topic_dist = self.get_theta(list(chunk))
                 for doc_keys, td in zip(keys_generator, topic_dist):
                     fout.write(','.join(doc_keys) + "," + ','.join([str(prob) for prob in td]) + "\n")
 
@@ -416,7 +426,7 @@ def main():
 
     print('gensim_lda.py')
     print(args)
-
+    
     print("Creating a documents object")
     docs = Documents(journal_file=args.journal_file,
                      num_test=args.num_test,
@@ -424,7 +434,7 @@ def main():
                      rebuild=args.rebuild,
                      keep_n=args.keep_n,
                      num_docs=args.num_docs,
-                     verbose=args.verbose)
+                     verbose=False)
     docs.fit()
 
     print("Build LDA model")
@@ -440,7 +450,11 @@ def main():
     lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 
     # save trained model to file
-    pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_total_" + str(lda.num_docs) + "_topics_" + str(lda.num_topics) + ".p"))
+    lda.docs.train_bow = None
+    lda.docs.test_bow = None
+    lda.docs.train_keys = None
+    lda.docs.test_keys = None
+    pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_train_" + str(lda.num_train) + "_topics_" + str(lda.num_topics) + ".p"))
 
 
 if __name__ == "__main__":

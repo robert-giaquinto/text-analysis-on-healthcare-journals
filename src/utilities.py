@@ -2,6 +2,7 @@ from __future__ import division, print_function, absolute_import
 from math import ceil
 import os
 import subprocess
+import cPickle as pickle
 from sys import platform as _platform
 
 # TODO should this be a file for holding general utilities functions?
