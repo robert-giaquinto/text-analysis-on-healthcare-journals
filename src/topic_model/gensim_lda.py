@@ -147,7 +147,7 @@ class GensimLDA(object):
         performance = []
         for n in num_topics:
             for c in chunksizes:
-                logger.info("Training LDA model with " + str(n) + "topics, and a mini-batch size of " + str(c) + ".")
+                logger.info("Training LDA model with " + str(n) + " topics, and a mini-batch size of " + str(c) + ".")
                 model, convergence = self.fit_partial(num_topics=n,
                                                       perplexity_threshold=perplexity_threshold,
                                                       evals_per_pass=evals_per_pass,

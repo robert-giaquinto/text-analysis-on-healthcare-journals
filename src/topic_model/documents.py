@@ -120,7 +120,7 @@ class Documents(object):
             logger.info("Splitting into " + str(self.num_train) + " documents for training, and " + str(self.num_test) + " for testing.")
 
             logger.info("Randomly shuffling input dataset...")
-            shuffle_file(self.journal_file)
+            shuffle_file(self.journal_file, memory_avail="50%")
 
             logger.info("Splitting the file into train and test")
             # this is a hacky way to do this (split_file wasn't intended to be used this way), but should work
