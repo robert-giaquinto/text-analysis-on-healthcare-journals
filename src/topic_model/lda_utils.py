@@ -57,7 +57,7 @@ def select_best_docs_per_topic(stat_file, num_docs):
 
     # loop through the file grabbing the top document keys for each topic
     topic_dict = {}    
-    prev_topic = -1
+    prev_topic = '-1'
     with open(stat_file, 'r') as fin:
         for line in fin:
             fields = line.replace("\n", "").split(",")
@@ -97,9 +97,12 @@ def extract_docs(keys, parsed_file):
     keys_ptr = 0
     with open(parsed_file, 'r') as fin:
         for line in fin:
+            if keys_ptr >= len(keys):
+                break
+            
             if line.startswith('\t'.join(keys[keys_ptr])):
                 # document found!
-                fields = line.replace("\n").split("\t")
+                fields = line.replace("\n", "").split("\t")
                 rval.append(fields[-1])
                 # increment keys pointer so that we know which journal keys to look for next
                 keys_ptr += 1
@@ -132,26 +135,34 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
 
 def main():
     data_dir = '/home/srivbane/shared/caringbridge/data/dev/topic_model/'
-    lda_file = 'LDA_test_100_train_728_topics_10.p'
-    parsed_journals_file = '/home/srivbane/shared/caringbridge/data/dev/parsed_json2/parsed_journal_all.txt'
-    doc_top_file = None
+    lda_file = 'LDA_test_5000_train_86459_topics_25.p'
+    parsed_journals_file = '/home/srivbane/shared/caringbridge/data/dev/parsed_json2/parsed_journal100000_all.txt'
+    doc_top_file = data_dir + 'train_document_topic_probs.txt'
+    stats_file = data_dir + 'kl_divergence_stats.txt'
     outfile = data_dir + 'top_docs_for_each_topic.txt'
 
     # load lda model
+    print("Unpickling model")
     lda = unpickle_it(os.path.join(data_dir, lda_file))
-    lda.load_bow()
-    lda.load_vocab()
-
+    lda.docs.load_bow()
+    lda.docs.load_vocab()
+    lda.docs.load_keys()
+    
     # create the document topic file if needed
     if doc_top_file is None:
+        print("Building a new document topic matrix")
         doc_top_file = os.path.join(data_dir, "train_document_topic_probs.txt")
         lda.save_doc_topic_probs(lda.docs.train_bow, lda.docs.train_keys, doc_top_file)
         
     # find the best documents for each topic
-    topic_keys = select_best_docs_per_topic(doc_top_file, 3)
+    print("Computing KL stats for each doc")
+    compute_doc_topic_stats(doc_top_file, stats_file)
+    topic_keys = select_best_docs_per_topic(stats_file, 3)
 
     # extract these documents
+    print("Extracting docs for each topic")
     doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
+    print(doc_topics)
 
     # write out results to a file
     with open(outfile, 'wb') as fout:
