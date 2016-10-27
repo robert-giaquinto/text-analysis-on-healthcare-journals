@@ -96,7 +96,7 @@ class GensimLDA(object):
                                                      num_topics=num_topics,
                                                      workers=self.n_workers,
                                                      chunksize=chunksize,
-                                                     eval_every=False)
+                                                     eval_every=None)
 
         converged = False
         prev_perplexity, perplexity = None, None
@@ -434,7 +434,7 @@ def main():
                      rebuild=args.rebuild,
                      keep_n=args.keep_n,
                      num_docs=args.num_docs,
-                     verbose=False)
+                     verbose=args.verbose)
     docs.fit()
 
     print("Build LDA model")
