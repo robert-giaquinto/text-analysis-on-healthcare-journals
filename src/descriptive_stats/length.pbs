@@ -1,0 +1,12 @@
+#!/bin/bash -l        
+#PBS -l walltime=3:30:00,nodes=1:ppn=16,mem=20gb 
+#PBS -q lab
+#PBS -o length.log
+#PBS -m abe 
+#PBS -M hexxx544@umn.edu
+#PBS -N CB_Length
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
++cd /home/srivbane/hexxx544/NLP
++python length.py
