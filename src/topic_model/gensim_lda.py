@@ -87,10 +87,14 @@ class GensimLDA(object):
 
         logger.info("Initializing model.")
         if self.n_workers == 1:
-            model = models.ldamodel.LdaModel(id2word=self.docs.vocab,
+            model = models.ldamodel.LdaModel(corpus=self.docs.train_bow,
+                                             id2word=self.docs.vocab,
                                              num_topics=num_topics,
                                              chunksize=chunksize,
                                              eval_every=None)
+            convergence['perplexities'] = self._perplexity_score(self.docs.test_bow, model, self.num_test + self.num_train)
+            convergence['docs_seen'] = self.num_train
+            return model, convergence
         else:
             model = models.ldamulticore.LdaMulticore(id2word=self.docs.vocab,
                                                      num_topics=num_topics,
@@ -107,8 +111,6 @@ class GensimLDA(object):
             # train on num_train / evals_per pass documents at the time, then evaluate perplexity
             chunk_stream = utils.grouper(self.docs.train_bow, int(ceil(self.num_train / evals_per_pass)), as_numpy=False)
             for i, chunk in enumerate(chunk_stream):
-                # bring document chunk  mini-batch into memory and update the model
-                chunk = list(chunk)
                 model.update(corpus=chunk, chunks_as_numpy=False)
                 docs_seen += len(chunk)
 
@@ -120,7 +122,7 @@ class GensimLDA(object):
 
                 # check for convergence
                 converged = prev_perplexity and abs(perplexity - prev_perplexity) < perplexity_threshold
-                if p > 0 and converged:
+                if (p > 0 or i+1 == evals_per_pass) and converged:
                     logger.info("Converged after " + str(p) + "passes, and seeing " + str(docs_seen) + " documents.")
                     logger.info("Convergence perplexity: " + str(perplexity))
 
