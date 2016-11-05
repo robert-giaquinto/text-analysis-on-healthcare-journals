@@ -448,11 +448,8 @@ def main():
             chunksizes=args.chunksizes,
             perplexity_threshold=args.threshold,
             evals_per_pass=args.evals_per_pass)
-
+    
     print(performance)
-    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric="NPMI")
-    lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
-    lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 
     # save trained model to file
     lda.docs.train_bow = None
@@ -461,6 +458,14 @@ def main():
     lda.docs.test_keys = None
     pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_train_" + str(lda.num_train) + "_topics_" + str(lda.num_topics) + ".p"))
 
+    print("Saving word topic probabilities...")
+    lda._init_docs()
+    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric="NPMI")
+    print("Saving topic terms...")
+    lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
+    print("Saving document topic probabilities")
+    lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 
+    
 if __name__ == "__main__":
     main()

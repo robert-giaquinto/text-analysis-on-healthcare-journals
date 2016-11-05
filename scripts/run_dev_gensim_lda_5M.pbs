@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -l walltime=3:00:00,nodes=1:ppn=16,mem=22gb
+#PBS -l walltime=24:00:00,nodes=1:ppn=1,mem=22gb
 #PBS -q lab
 #PBS -o dev_lda.log
 #PBS -m abe
@@ -9,4 +9,4 @@ module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts
-./run_dev_gensim_lda.sh
+./run_dev_gensim_lda_5M.sh
