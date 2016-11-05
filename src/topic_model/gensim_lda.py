@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 gensim_logger1 = logging.getLogger('gensim.models.ldamodel')
 gensim_logger2 = logging.getLogger('gensim.models.ldamulticore')
-    
+
 # filter out the un-needed  gensim logging messages
 class NoGensimFilter(logging.Filter):
     def filter(self, record):
         useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
         return not useless
-    
+
 gensim_logger1.addFilter(NoGensimFilter())
 gensim_logger2.addFilter(NoGensimFilter())
 
@@ -51,7 +51,7 @@ class GensimLDA(object):
         self.topic_terms = None
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
         self.num_topics = None
-        
+
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
 
@@ -92,7 +92,7 @@ class GensimLDA(object):
                                              num_topics=num_topics,
                                              chunksize=chunksize,
                                              eval_every=None)
-            convergence['perplexities'] = self._perplexity_score(self.docs.test_bow, model, self.num_test + self.num_train)
+            convergence['perplexities'] = [self._perplexity_score(model, self.docs.test_bow, total_docs=self.num_test + self.num_train)]
             convergence['docs_seen'] = self.num_train
             return model, convergence
         else:
@@ -171,7 +171,7 @@ class GensimLDA(object):
             self.topic_terms = self._unweighted_topic_terms()
         # save best number of topics found
         self.num_topics = self.model.num_topics
-            
+
         return performance
 
     def _perplexity_score(self, model, X, total_docs=None):
@@ -214,7 +214,7 @@ class GensimLDA(object):
         """
         if self.model is None:
             raise ValueError("You must call fit before you can score the quality of topics.")
-        
+
         if self.doc_token2freq is None or self.token2freq is None:
             self.token2freq, self.doc_token2freq = get_word_counts(self.docs.train_bow, self.docs.vocab)
 
@@ -428,7 +428,7 @@ def main():
 
     print('gensim_lda.py')
     print(args)
-    
+
     print("Creating a documents object")
     docs = Documents(journal_file=args.journal_file,
                      num_test=args.num_test,
