@@ -422,8 +422,10 @@ def main():
     parser.add_argument('--evals_per_pass', type=int, default=4, help="How many times to check model perplexity per passes over the full dataset.")
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
+    parser.add_argument('--no_shuffle', dest="shuffle", action="store_false", help='Add this flag to not shuffle the data before splitting it into training and test BOW files. This is not recommended, but can save a lot of time on big datasets.')
     parser.set_defaults(verbose=False)
     parser.set_defaults(rebuild=False)
+    parser.set_defaults(shuffle=True)
     args = parser.parse_args()
 
     print('gensim_lda.py')
@@ -436,6 +438,7 @@ def main():
                      rebuild=args.rebuild,
                      keep_n=args.keep_n,
                      num_docs=args.num_docs,
+                     shuffle=args.shuffle,
                      verbose=args.verbose)
     docs.fit()
 

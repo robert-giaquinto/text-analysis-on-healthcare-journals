@@ -21,7 +21,7 @@ class Documents(object):
     used creating the vocabulary, and storing/loading the BOW data
     without needed to rebuild the BOW every time
     """
-    def __init__(self, journal_file, num_test, data_dir=None, keep_n=25000, rebuild=True, num_docs=None, verbose=False):
+    def __init__(self, journal_file, num_test, data_dir=None, keep_n=25000, rebuild=True, num_docs=None, shuffle=True, verbose=False):
         """
         Args:
             journal_file: full file name of the big flat file of all tokenized journals and their keys.
@@ -42,6 +42,7 @@ class Documents(object):
         self.num_docs = num_docs
         self.num_train = None
         self.num_test = num_test
+        self.shuffle = shuffle
 
         if data_dir is None:
             self.data_dir = os.path.dirname(journal_file).replace("clean_journals", "topic_model")
@@ -119,8 +120,9 @@ class Documents(object):
         if self.num_test > 0:
             logger.info("Splitting into " + str(self.num_train) + " documents for training, and " + str(self.num_test) + " for testing.")
 
-            logger.info("Randomly shuffling input dataset...")
-            shuffle_file(self.journal_file, memory_avail="50%")
+            if self.shuffle:
+                logger.info("Randomly shuffling input dataset...")
+                shuffle_file(self.journal_file, memory_avail="50%")
 
             logger.info("Splitting the file into train and test")
             # this is a hacky way to do this (split_file wasn't intended to be used this way), but should work
@@ -179,15 +181,17 @@ def main():
     parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
+    parser.add_argument('--no_shuffle', dest="shuffle", action="store_false", help='Add this flag to not shuffle the input data before splitting it into training and test BOW files. Shuffling is highly recommended, but can take a time for large datasets.')
     parser.set_defaults(verbose=False)
     parser.set_defaults(rebuild=False)
+    parser.set_defaults(shuffle=True)
     args = parser.parse_args()
 
     print('documents.py')
     print(args)
 
     start = time.time()
-    docs = Documents(journal_file = args.journal_file, num_test=args.num_test, data_dir=args.data_dir, rebuild=args.rebuild, keep_n=args.keep_n, num_docs=args.num_docs, verbose=args.verbose)
+    docs = Documents(journal_file = args.journal_file, num_test=args.num_test, data_dir=args.data_dir, rebuild=args.rebuild, keep_n=args.keep_n, num_docs=args.num_docs, shuffle=args.shuffle, verbose=args.verbose)
     docs.fit()
     end = time.time()
     print("Time to convert journal tokens into a BOW and vocabulary: " + str(end - start) + " seconds.")
