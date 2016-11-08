@@ -20,7 +20,7 @@ gensim_logger2 = logging.getLogger('gensim.models.ldamulticore')
 class NoGensimFilter(logging.Filter):
     def filter(self, record):
         #useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
-        useless = record.funcName == "show_topics"
+        useless = record.funcName == "blend" or record.funcName == "show_topics"
         return not useless
 
 gensim_logger1.addFilter(NoGensimFilter())
@@ -467,7 +467,7 @@ def main():
     pickle_it(lda, os.path.join(args.data_dir, "LDA_test_" + str(lda.num_test) + "_train_" + str(lda.num_train) + "_topics_" + str(lda.num_topics) + ".p"))
 
     print("Saving word topic probabilities...")
-    lda._init_docs()
+    lda._init_docs(docs)
     lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric="NPMI")
     print("Saving topic terms...")
     lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
