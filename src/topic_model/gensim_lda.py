@@ -19,7 +19,8 @@ gensim_logger2 = logging.getLogger('gensim.models.ldamulticore')
 # filter out the un-needed  gensim logging messages
 class NoGensimFilter(logging.Filter):
     def filter(self, record):
-        useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
+        #useless = record.getMessage().startswith('PROGRESS')  or record.funcName == "blend" or record.funcName == "show_topics"
+        useless = record.funcName == "show_topics"
         return not useless
 
 gensim_logger1.addFilter(NoGensimFilter())
@@ -87,14 +88,10 @@ class GensimLDA(object):
 
         logger.info("Initializing model.")
         if self.n_workers == 1:
-            model = models.ldamodel.LdaModel(corpus=self.docs.train_bow,
-                                             id2word=self.docs.vocab,
+            model = models.ldamodel.LdaModel(id2word=self.docs.vocab,
                                              num_topics=num_topics,
                                              chunksize=chunksize,
                                              eval_every=None)
-            convergence['perplexities'] = [self._perplexity_score(model, self.docs.test_bow, total_docs=self.num_test + self.num_train)]
-            convergence['docs_seen'] = self.num_train
-            return model, convergence
         else:
             model = models.ldamulticore.LdaMulticore(id2word=self.docs.vocab,
                                                      num_topics=num_topics,
@@ -102,6 +99,17 @@ class GensimLDA(object):
                                                      chunksize=chunksize,
                                                      eval_every=None)
 
+        if perplexity_threshold == 0.0:
+            # don't stop early, just do 1 pass all in gensim
+            logger.info("Running for just one full pass through data, not stopping to check for perplexity convergence")
+            model.eval_every = evals_per_pass
+            model.update(corpus=self.docs.train_bow)
+            convergence['perplexities'] = [self._perplexity_score(model, self.docs.test_bow, total_docs=self.num_test + self.num_train)]
+            convergence['docs_seen'] = self.num_train
+            return model, convergence
+
+        # ELSE: run for a chunk of data, check for convergence
+        logger.info("Running for at least one pass, checking for perplexity convergence with threshold of " + str(perplexity_threshold))
         converged = False
         prev_perplexity, perplexity = None, None
         docs_seen = 0
