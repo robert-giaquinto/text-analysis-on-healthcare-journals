@@ -37,8 +37,29 @@ def compute_doc_topic_stats(infile, outfile):
             kl = kl_div(topic_dist)
             fout.write(','.join(keys) + ',' + str(max_topic) + ',' + str(kl) + "\n")
 
+
+def select_docs_per_topic_by_max(infile, num_docs=1):
+    with open(infile, 'r') as fin:
+        for i, line in enumerate(fin):
+            fields = line.replace('\n', '').split(',')
+            keys = fields[0:4]
+            topic_dist = [float(f) for f in fields[4:]]
+
+            # initialize the list of current max found for each topic
+            if i == 0:
+                current_max = [-1.0*float('inf')] * len(topic_dist)
+                keys_to_max = [ [] for i in range(len(topic_dist))]
+                
+            for t, (cur_max, new_topic) in enumerate(zip(current_max, topic_dist)):
+                if cur_max < new_topic:
+                    # update keys
+                    keys_to_max[t] = (t, keys)
+                    current_max[t] = new_topic
+    return keys_to_max
+                    
+    
             
-def select_best_docs_per_topic(stat_file, num_docs):
+def select_docs_per_topic_by_kl(stat_file, num_docs):
     """
     For each topic select the num_docs
     documents that most exhibit that topic.
@@ -157,7 +178,7 @@ def main():
     # find the best documents for each topic
     print("Computing KL stats for each doc")
     compute_doc_topic_stats(doc_top_file, stats_file)
-    topic_keys = select_best_docs_per_topic(stats_file, 3)
+    topic_keys = select_docs_per_topic_by_kl(stats_file, 3)
 
     # extract these documents
     print("Extracting docs for each topic")
