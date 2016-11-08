@@ -259,17 +259,23 @@ class GensimLDA(object):
             raise ValueError("Topic terms not defined, call fit first")
 
         # put the topic in order of highest to lowest based on a metric
-        scores = self.topic_scores(metric)
-        sorted_term_scores = sorted(zip(self.topic_terms, scores), key=lambda x: x[1], reverse=True)
-        sorted_terms, sorted_scores  = zip(*sorted_term_scores)
-        sorted_ids = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
-        # write to file, order topics by ranking
-        with open(output_filename, "wb") as f:
-            f.write("topic_id,topic_rank,score," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
-            topic_rank = 1
-            for terms, topic_id, score in zip(sorted_terms, sorted_ids, sorted_scores):
-                f.write(str(topic_id) + "," + str(topic_rank) + "," + str(score) + "," + ','.join(terms) + "\n")
-                topic_rank += 1
+        if metric != "none":
+            scores = self.topic_scores(metric)
+            sorted_term_scores = sorted(zip(self.topic_terms, scores), key=lambda x: x[1], reverse=True)
+            sorted_terms, sorted_scores  = zip(*sorted_term_scores)
+            sorted_ids = [rank for rank, _ in sorted(enumerate(scores), key = lambda x: x[1], reverse=True)]
+            # write to file, order topics by ranking
+            with open(output_filename, "wb") as f:
+                f.write("topic_id,topic_rank,score," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
+                topic_rank = 1
+                for terms, topic_id, score in zip(sorted_terms, sorted_ids, sorted_scores):
+                    f.write(str(topic_id) + "," + str(topic_rank) + "," + str(score) + "," + ','.join(terms) + "\n")
+                    topic_rank += 1
+        else:
+            with open(output_filename, "wb") as f:
+                f.write("topic_id," + ','.join(['term' + str(i) for i in range(10)]) + "\n")
+                for topic_id, term_arr in enumerate(self.topic_terms):
+                    f.write(str(topic_id) + "," + ','.join(term_arr) + "\n")
 
     def save_word_topic_probs(self, output_filename, metric="NPMI"):
         """
@@ -278,12 +284,21 @@ class GensimLDA(object):
         """
         betas = self.get_beta()
         vocab_words = [wd for key, wd in sorted(self.model.id2word.iteritems())]
-        topic_scores = self.topic_scores(metric)
-        with open(output_filename, "wb") as f:
-            f.write("topic_weight," + ','.join([w for w in vocab_words]) + "\n")
-            for topic_score, word_probs in zip(topic_scores, betas):
-                f.write(str(topic_score) + "," + ','.join([str(p) for p in word_probs]) + "\n")
+        if metric != "none":
+            topic_scores = self.topic_scores(metric)
 
+        with open(output_filename, "wb") as f:
+            if metric != "none":
+                f.write("topic_weight," + ','.join([w for w in vocab_words]) + "\n")
+                for topic_score, word_probs in zip(topic_scores, betas):
+                    f.write(str(topic_score) + "," + ','.join([str(p) for p in word_probs]) + "\n")
+            else:
+                f.write(','.join([w for w in vocab_words]) + "\n")
+                for word_probs in betas:
+                    f.write(','.join([str(p) for p in word_probs]) + "\n")
+
+                    
+                    
     def save_doc_topic_probs(self, bow_generator, keys_generator, output_filename):
         """
         Save the probability distribution of topics over each of the documents
@@ -431,9 +446,11 @@ def main():
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
     parser.add_argument('--no_shuffle', dest="shuffle", action="store_false", help='Add this flag to not shuffle the data before splitting it into training and test BOW files. This is not recommended, but can save a lot of time on big datasets.')
+    parser.add_argument('--no_score', dest="score_topics", action="store_false", help='Add this flag to not score and rank the coherence of topics.')
     parser.set_defaults(verbose=False)
     parser.set_defaults(rebuild=False)
     parser.set_defaults(shuffle=True)
+    parser.set_defaults(score_topics=True)
     args = parser.parse_args()
 
     print('gensim_lda.py')
@@ -468,9 +485,13 @@ def main():
 
     print("Saving word topic probabilities...")
     lda._init_docs(docs)
-    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric="NPMI")
+    if args.score_topics:
+        metric = "NPMI"
+    else:
+        metric = "none"
+    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric=metric)
     print("Saving topic terms...")
-    lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric="NPMI")
+    lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric=metric)
     print("Saving document topic probabilities")
     lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 

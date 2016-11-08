@@ -56,12 +56,12 @@ class Documents(object):
         self.train_bow = None
         self.test_bow = None
         # init keys generator corresponding to BOW file for training and test
-        self.train_shard_file = None
+        prefix = os.path.splitext(os.path.split(journal_file)[-1])[0]
+        self.train_shard_file = os.path.join(os.path.dirname(journal_file), prefix + "_shards", prefix + "_01_of_2.txt")
         self.train_keys = None
-        self.test_shard_file = None
+        self.test_shard_file = os.path.join(os.path.dirname(journal_file) + "_shards", prefix + "_02_of_2.txt")
         self.test_keys = None
         # name of file where MatrixMarket bag-of-words data is stored
-        prefix = os.path.splitext(os.path.split(journal_file)[-1])[0]
         self.train_file = os.path.join(self.data_dir, "train_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "_terms.mm")
         if num_test > 0:
             self.test_file = os.path.join(self.data_dir, "test_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "_terms.mm")
