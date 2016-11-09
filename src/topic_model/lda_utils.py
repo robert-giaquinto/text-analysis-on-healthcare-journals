@@ -1,6 +1,7 @@
 from __future__ import division, print_function, absolute_import
 import os
 import subprocess
+import re
 import numpy as np
 
 from src.topic_model.documents import Documents
@@ -53,7 +54,7 @@ def select_docs_per_topic_by_max(infile, num_docs=1):
             for t, (cur_max, new_topic) in enumerate(zip(current_max, topic_dist)):
                 if cur_max < new_topic:
                     # update keys
-                    keys_to_max[t] = (t, keys)
+                    keys_to_max[t] = (str(t), keys)
                     current_max[t] = new_topic
     return keys_to_max
                     
@@ -105,6 +106,14 @@ def select_docs_per_topic_by_kl(stat_file, num_docs):
     return rval
 
 
+def sanitize_docs(doc):
+    """
+    Perform some basic cleaning of the text to make it more easily readable
+    """
+    rval = re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", doc))
+    return rval
+
+
 def extract_docs(keys, parsed_file):
     """
     Pull out the journal text for a list of keys
@@ -124,7 +133,8 @@ def extract_docs(keys, parsed_file):
             if line.startswith('\t'.join(keys[keys_ptr])):
                 # document found!
                 fields = line.replace("\n", "").split("\t")
-                rval.append(fields[-1])
+                doc = sanitize_docs(fields[-1])
+                rval.append(doc)
                 # increment keys pointer so that we know which journal keys to look for next
                 keys_ptr += 1
     return rval
@@ -179,15 +189,23 @@ def main():
     print("Computing KL stats for each doc")
     compute_doc_topic_stats(doc_top_file, stats_file)
     topic_keys = select_docs_per_topic_by_kl(stats_file, 3)
-
+    print("Selecting best doc matches via max")
+    max_topic_keys = select_docs_per_topic_by_max(doc_top_file)
+    
     # extract these documents
     print("Extracting docs for each topic")
     doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
     print(doc_topics)
+    max_doc_topics = extract_best_docs_per_topic(max_topic_keys, parsed_journals_file)
+    print(max_doc_topics)
 
     # write out results to a file
     with open(outfile, 'wb') as fout:
         for topic, doc in doc_topics:
+            fout.write(topic + "\t" + doc + "\n")
+
+    with open(outfile.replace("top_docs", "max_top_docs"), 'wb') as fout:
+        for topic, doc in max_doc_topics:
             fout.write(topic + "\t" + doc + "\n")
 
 
