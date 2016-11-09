@@ -38,6 +38,23 @@ def compute_doc_topic_stats(infile, outfile):
             kl = kl_div(topic_dist)
             fout.write(','.join(keys) + ',' + str(max_topic) + ',' + str(kl) + "\n")
 
+            
+class FixedArray(object):
+    def __init__(self, num_docs, num_topics):
+        self.num_docs = num_docs
+        self.num_topics = num_topics
+        self.topic_maxs = [[-1.0 * float("inf") for d in range(num_docs)] for t in range(num_topics)]
+        self.keys = [[[] for d in range(num_docs)] for t in range(num_topics)]
+
+    def add(self, topics, keys):
+        for t in range(num_topics):
+            for d in range(num_docs):
+                if topics[t] > self.topic_maxs[t][d]:
+                    self.topic_maxs[t] = self.topic_maxs[0:d] + [topics[t]] + self.topic_maxs[d:-1]
+                    self.keys[t] = self.keys[0:d] + keys + self.keys[d:-1]
+                    break
+
+
 
 def select_docs_per_topic_by_max(infile, num_docs=1):
     with open(infile, 'r') as fin:
@@ -48,14 +65,13 @@ def select_docs_per_topic_by_max(infile, num_docs=1):
 
             # initialize the list of current max found for each topic
             if i == 0:
-                current_max = [-1.0*float('inf')] * len(topic_dist)
-                keys_to_max = [ [] for i in range(len(topic_dist))]
-                
-            for t, (cur_max, new_topic) in enumerate(zip(current_max, topic_dist)):
-                if cur_max < new_topic:
-                    # update keys
-                    keys_to_max[t] = (str(t), keys)
-                    current_max[t] = new_topic
+                num_topics = len(topic_dist)
+                farr = FixedArray(num_docs=num_docs, num_topics=num_topics)
+
+            farr.add(topic_dist, keys)
+
+    # convert the farr object to a list of tuples
+    keys_to_max = [(str(t), k) for t, key_arr in enumerate(self.keys) for k in key_arr]
     return keys_to_max
                     
     
@@ -165,12 +181,12 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
 
 
 def main():
-    data_dir = '/home/srivbane/shared/caringbridge/data/dev/topic_model/'
-    lda_file = 'LDA_test_5000_train_86459_topics_25.p'
-    parsed_journals_file = '/home/srivbane/shared/caringbridge/data/dev/parsed_json2/parsed_journal100000_all.txt'
+    data_dir = '/home/srivbane/shared/caringbridge/data/topic_model/'
+    lda_file = 'LDA_test_10000_train_13747900_topics_100.p'
+    parsed_journals_file = '/home/srivbane/shared/caringbridge/data/parsed_json/parsed_journal_all.txt'
     doc_top_file = data_dir + 'train_document_topic_probs.txt'
     stats_file = data_dir + 'kl_divergence_stats.txt'
-    outfile = data_dir + 'top_docs_for_each_topic.txt'
+    outfile = data_dir + 'top_doc_for_each_topic.txt'
 
     # load lda model
     print("Unpickling model")
@@ -195,9 +211,11 @@ def main():
     # extract these documents
     print("Extracting docs for each topic")
     doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
-    print(doc_topics)
+    print(doc_topics[0])
+
+    print("Extracting docs for each topic via max approach")
     max_doc_topics = extract_best_docs_per_topic(max_topic_keys, parsed_journals_file)
-    print(max_doc_topics)
+    print(max_doc_topics[0])
 
     # write out results to a file
     with open(outfile, 'wb') as fout:

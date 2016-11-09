@@ -62,8 +62,9 @@ class JournalCleaningWorker(object):
 
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
-        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'what', u'who', u'whom', u'if', u'until', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down',  u'on', u'off', u'over', u'under', u'again', u'further', u'when', u'where', u'why', u'own']
-        self.stopword_set = set([w for w in base_stopwords if w not in not_stopwords])
+        custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really'] + list('abcdefghjklmnopqrstuvwxyz')
+        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down', u'over', u'under', u'again', u'further', u'what',  u'where', u'why']
+        self.stopword_set = set([w for w in base_stopwords + custom_stopwords if w not in not_stopwords])
 
         self.split_dash1 = re.compile(r"([a-zA-Z])([\-/])([a-zA-Z])")
         self.split_dash2 = re.compile(r"([0-9])([\-/])([a-zA-Z])")
@@ -232,7 +233,7 @@ class JournalCleaningWorker(object):
 
         # split hyphens and slashes where appropriate
         if split_dash:
-            journal.body = self.split_dash1.sub(r"\1 \3", journal.body)
+            journal.body = self.split_dash1.sub(r"\1_\3", journal.body)
             journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
             journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
 
