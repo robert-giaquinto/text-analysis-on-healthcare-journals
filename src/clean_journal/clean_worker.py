@@ -9,6 +9,7 @@ import re
 import unicodedata
 
 from src.journal import Journal
+from src.clean_journal.first_names import FirstName
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,7 @@ class JournalCleaningWorker(object):
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
         custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really'] + list('abcdefghjklmnopqrstuvwxyz')
+        self.first = FirstName()
         not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down', u'over', u'under', u'again', u'further', u'what',  u'where', u'why']
         self.stopword_set = set([w for w in base_stopwords + custom_stopwords if w not in not_stopwords])
 
@@ -203,7 +205,7 @@ class JournalCleaningWorker(object):
         # TODO
         return journal
 
-    def clean_journal_for_topic_modeling(self, journal, as_ascii=True, rm_html=True, rm_whitespace=True, split_dash=True, homogenize_patterns=True, expand_contractions=True, rm_special_chars=True, rm_punct=True, tokenize=True, rm_stopwords=True, lemmatize=True):
+    def clean_journal_for_topic_modeling(self, journal, as_ascii=True, rm_html=True, rm_whitespace=True, split_dash=True, homogenize_patterns=True, expand_contractions=True, rm_special_chars=True, rm_punct=True, tokenize=True, rm_stopwords=True, rm_names=True, lemmatize=True):
         """
         Helper function that implements how to clean text of a journal
         for work text that will be used in topic modeling
@@ -289,6 +291,10 @@ class JournalCleaningWorker(object):
         # remove stopwords
         if rm_stopwords:
             journal.body = [w for w in journal.body if w.lower() not in self.stopword_set]
+
+        # remove first names
+        if rm_names:
+            journal.body = [w for w in journal.body if w.lower() not in self.first.names]
 
         # lemmatize the remaining tokens
         # convert to lowercase, would like to do this earlier, but might get better lemmatizing results
