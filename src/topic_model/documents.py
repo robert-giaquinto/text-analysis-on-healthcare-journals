@@ -110,7 +110,8 @@ class Documents(object):
         """
         self.vocab = corpora.Dictionary(tokens for tokens in JournalTokens(self.journal_file))
         if self.keep_n is not None:
-            self.vocab.filter_extremes(no_below=1, no_above=1.0, keep_n=self.keep_n)
+            # a term cannot appear in more than 90% of docs and only keep the top keep_n terms (remaining)
+            self.vocab.filter_extremes(no_below=1, no_above=0.90, keep_n=self.keep_n)
             self.vocab.compactify()
 
         # save the dictionary for next time

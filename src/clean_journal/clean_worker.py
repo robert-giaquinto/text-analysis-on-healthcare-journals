@@ -9,7 +9,7 @@ import re
 import unicodedata
 
 from src.journal import Journal
-from src.clean_journal.first_names import FirstName
+from src.clean_journal.first_names import FirstNames
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class JournalCleaningWorker(object):
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
         custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really'] + list('abcdefghjklmnopqrstuvwxyz')
-        self.first = FirstName()
+        self.first = FirstNames()
         not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down', u'over', u'under', u'again', u'further', u'what',  u'where', u'why']
         self.stopword_set = set([w for w in base_stopwords + custom_stopwords if w not in not_stopwords])
 
