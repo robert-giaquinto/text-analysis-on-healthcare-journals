@@ -39,6 +39,9 @@ class JournalCleaningWorker(object):
                        from the JournalsManager class (i.e. for parallel processing)
                        otherwise, if you're just interacting with a Journals object in a
                        for loop you can call whatever cleaning method you want.
+            init_stream: True if you plan to clean the journals in input_file. You can set to
+                         False if you plan to just use this class for the clean_journal methods
+                         and don't plan to pass a whole input file to process.
             verbose:   Flag for whether or not to print progress to the log.
         """
         if verbose:
@@ -351,13 +354,15 @@ def main():
     print('clean_worker.py')
     print(args)
 
-    kf = "/home/srivbane/shared/caringbridge/data/dev/clean_journals/all_keys.tsv"
-    j = JournalCleaningWorker(input_file=args.input_file, output_file=args.output_file, clean_method=args.clean_method, verbose=args.verbose)
-
+    j = JournalCleaningWorker(input_file=args.input_file, output_file=args.output_file, clean_method=args.clean_method, init_stream=True, verbose=args.verbose)
+    
     for i, journal in enumerate(j.stream):
         if i > 3:
             break
+        print("Original journal:\n")
         print(journal)
+        print("\nCleaned journal:\n")
+        print(j.clean_journal(journal))
 
 
 if __name__ == "__main__":

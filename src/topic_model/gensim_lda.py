@@ -104,8 +104,6 @@ class GensimLDA(object):
             logger.info("Running for just one full pass through data, not stopping to check for perplexity convergence")
             model.eval_every = evals_per_pass
             model.update(corpus=self.docs.train_bow)
-            convergence['perplexities'] = [self._perplexity_score(model, self.docs.test_bow, total_docs=self.num_test + self.num_train)]
-            convergence['docs_seen'] = self.num_train
             return model, convergence
 
         # ELSE: run for a chunk of data, check for convergence
@@ -123,7 +121,13 @@ class GensimLDA(object):
                 docs_seen += len(chunk)
 
                 # measure perplexity after training of the most recent chunk
-                perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
+                # if a test set is not given, assume this is a small dataset and run perplexity
+                # calculation on full document list again
+                if self.num_test > 0:
+                    perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
+                else:
+                    perplexity = self._perplexity_score(model, self.docs.train_bow, self.num_train)
+                    
                 logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
                 convergence['perplexities'].append(perplexity)
                 convergence['docs_seen'].append(docs_seen)
