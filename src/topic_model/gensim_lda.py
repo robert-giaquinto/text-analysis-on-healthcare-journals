@@ -104,6 +104,15 @@ class GensimLDA(object):
             logger.info("Running for just one full pass through data, not stopping to check for perplexity convergence")
             model.eval_every = evals_per_pass
             model.update(corpus=self.docs.train_bow)
+
+            if self.num_test > 0:
+                perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
+            else:
+                perplexity = self._perplexity_score(model, self.docs.train_bow, self.num_train)
+                
+            convergence['perplexities'].append(perplexity)
+            convergence['docs_seen'].append(self.num_train)
+
             return model, convergence
 
         # ELSE: run for a chunk of data, check for convergence
@@ -493,11 +502,12 @@ def main():
         metric = "NPMI"
     else:
         metric = "none"
-    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric=metric)
+    
     print("Saving topic terms...")
     lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric=metric)
-    print("Saving document topic probabilities")
-    lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+    #lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric=metric)
+    #print("Saving document topic probabilities")
+    #lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 
     
 if __name__ == "__main__":

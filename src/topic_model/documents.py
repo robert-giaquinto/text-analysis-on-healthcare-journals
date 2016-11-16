@@ -111,7 +111,7 @@ class Documents(object):
         self.vocab = corpora.Dictionary(tokens for tokens in JournalTokens(self.journal_file))
         if self.keep_n is not None:
             # a term cannot appear in more than 90% of docs and only keep the top keep_n terms (remaining)
-            self.vocab.filter_extremes(no_below=1, no_above=0.90, keep_n=self.keep_n)
+            self.vocab.filter_extremes(no_below=1, no_above=0.75, keep_n=self.keep_n)
             self.vocab.compactify()
 
         # save the dictionary for next time
@@ -192,7 +192,13 @@ def main():
     print(args)
 
     start = time.time()
-    docs = Documents(journal_file = args.journal_file, num_test=args.num_test, data_dir=args.data_dir, rebuild=args.rebuild, keep_n=args.keep_n, num_docs=args.num_docs, shuffle=args.shuffle, verbose=args.verbose)
+    docs = Documents(journal_file = args.journal_file,
+                     num_test=args.num_test,
+                     data_dir=args.data_dir,
+                     rebuild=args.rebuild,
+                     keep_n=args.keep_n,
+                     num_docs=args.num_docs,
+                     shuffle=args.shuffle, verbose=args.verbose)
     docs.fit()
     end = time.time()
     print("Time to convert journal tokens into a BOW and vocabulary: " + str(end - start) + " seconds.")
