@@ -1,0 +1,14 @@
+#!/bin/bash -l
+#PBS -l walltime=12:00:00,nodes=1:ppn=1,mem=8gb
+#PBS -q lab
+#PBS -o documents.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N documents
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts
+DD=/home/srivbane/shared/caringbridge/data/
+fname=clean_journals_no_names.txt
+python -m src.topic_model.documents --journal_file ${DD}clean_journals/${fname} --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --rebuild --log

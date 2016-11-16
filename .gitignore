@@ -8,6 +8,7 @@
 *.log
 scripts/CB_*
 scripts/*.e*
+scripts/logs/*
 build/
 dist/
 text_analysis.egg-info/

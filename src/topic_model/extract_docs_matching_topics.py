@@ -40,10 +40,20 @@ def compute_doc_topic_stats(infile, outfile):
 
             
 class FixedArray(object):
+    """
+    Structure for holding the documents with the three
+    highest topic proportions for each topic.
+    
+    Works in a streaming fashion, for each new document
+    pass it to the add method and the method will determine if
+    the object should update which documents it is holding for each topic.
+    """
     def __init__(self, num_docs, num_topics):
         self.num_docs = num_docs
         self.num_topics = num_topics
+        # store the max topic proportion assuming you want to keep the top num_docs for each topic
         self.topic_maxs = [[-1.0 * float("inf") for d in range(num_docs)] for t in range(num_topics)]
+        # save the keys to the corresponding document that is one of the top num_docs matches to each topics
         self.keys = [[[] for d in range(num_docs)] for t in range(num_topics)]
 
     def add(self, topics, keys):
@@ -125,6 +135,11 @@ def select_docs_per_topic_by_kl(stat_file, num_docs):
 def sanitize_docs(doc):
     """
     Perform some basic cleaning of the text to make it more easily readable
+
+    This is meant to be run on the documents that are extracted, so that
+    they're presentable to a general audience.
+
+    For now it should suffice to simply remove html formatting (if it exists)
     """
     rval = re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", doc))
     return rval
@@ -178,6 +193,10 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
     # combine the topics docs for each topic
     rval = zip(topics, docs)
     return rval
+
+
+
+
 
 
 def main():

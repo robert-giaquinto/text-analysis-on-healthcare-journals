@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -l walltime=12:00:00,nodes=1:ppn=16,mem=62gb
+#PBS -q small
+#PBS -o lda_no_name.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N CB_LDA_NO_NAME
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts
+DD=/home/srivbane/shared/caringbridge/data/
+python -m src.topic_model.gensim_lda --journal_file ${DD}clean_journals/clean_journals_no_names.txt --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --num_topics 100 --chunksizes 2048 --threshold 0.0 --n_workers 16 --evals_per_pass 25 --log --no_score

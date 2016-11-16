@@ -1,0 +1,14 @@
+#!/bin/bash -l
+#PBS -l walltime=24:00:00,nodes=1:ppn=1,mem=8gb
+#PBS -q lab
+#PBS -o extract_artifacts.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N extract_artifacts
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts
+DD=/home/srivbane/shared/caringbridge/data/
+journal=clean_journals_all.txt
+python -m src.topic_model.extract_model_artifacts --journal_file ${DD}clean_journals/${fname} --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --num_topics 100 --n_workers 1 --log
