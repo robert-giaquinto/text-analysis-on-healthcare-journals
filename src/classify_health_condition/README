@@ -1,0 +1,5 @@
+# REQUIREMENTS
+You will need the following python packages installed:
+
+1. `pip install -U scikit-learn`
+2. `pip install pandas`
