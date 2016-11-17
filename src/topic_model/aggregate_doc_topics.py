@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 import os
 import subprocess
 import numpy as np
-
+import argparse
 
 def avg_by_site(infile, outfile):
     """
@@ -81,7 +81,7 @@ def main():
     print('aggregate_doc_topics.py')
     print(args)
     
-    avg_by_site(args.outfile, args.infile)
+    avg_by_site(args.infile, args.outfile)
 
 
 
