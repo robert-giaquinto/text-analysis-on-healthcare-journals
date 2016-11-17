@@ -51,6 +51,7 @@ def main():
     topic_file = '/home/srivbane/shared/caringbridge/data/dev/topic_model/topic_features_per_site.csv'
     other_features_file = None # this will point to mark's file
     health_condition_file = None # need to create this too, if it doesn't already exist. should have a column for site id and a column for health condition
+    custom_conditions = ['custom', 'Other']
 
     random_seed = 2016
     
@@ -62,8 +63,8 @@ def main():
 
 
     # save the custom answers for prediction later
-    custom_df = df[-df.health_condition.isin(standard_conditions),].reset_index()
-    df = df[df.health_condition.isin(standard_conditions),].reset_index()
+    custom_df = df[df.health_condition.isin(custom_conditions),].reset_index()
+    df = df[-df.health_condition.isin(custom_conditions),].reset_index()
 
     # split the data into training and test
     test_size = 0.25
