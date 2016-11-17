@@ -68,6 +68,7 @@ def split_data(df, test_size=0.25, random_seed=None):
 def main():
     topic_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/topic_features_per_site.csv'
     keywords_and_hc_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/cond_keywords.txt'
+    custom_conditions = ['custom', 'Other']
 
     # set a random seed so that results are reproducible
     random_seed = 2016
@@ -78,9 +79,9 @@ def main():
     print("Size of dataset:", df.shape)
 
     # save the custom answers for prediction later
-    custom_df = df.loc[df.health_condition == 'custom',].reset_index()
+    custom_df = df[df.health_condition.isin(custom_conditions),].reset_index()
     print("size of custom df:", custom_df.shape)
-    df = df.loc[df.health_condition != 'custom',].reset_index()
+    df = df[-df.health_condition.isin(custom_conditions),].reset_index()
     print("Size of data available for training:", df.shape)
 
     # split the data into training and test
