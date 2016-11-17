@@ -4,16 +4,19 @@ import pandas as pd
 from sklearn.linear_model import LassoCV
 from sklearn.model_selection import train_test_split
 
+
 def load_topic_features(infile):
-    rval = pd.read_csv(infile)
-    num_topics = rval.shape[1] - 1
+    df = pd.read_csv(infile)
+    num_topics = df.shape[1] - 1
     col_names = ['site_id'] + ['topic' + str(t) for t in range(num_topics)]
+    df.columns = col_names
+    return df
 
 
-def load_data(topic_file, other_features_file, health_condition_file):
-    rval = load_topic_features(topic_file)
+def load_data(topic_file, keywords_and_hc_file):
+    topic_df = load_topic_features(topic_file)
 
-    other = pd.read_csv(other_features_file)
+    hc_df = pd.read_csv(other_features_file)
     # TODO: rename the site_id column to site_id
     rval = pd.merge(rval, other, on=['site_id'], how='left', sort=False)
 
@@ -45,7 +48,7 @@ def split_data(df, test_size=0.25, random_seed=None):
 
 
 def main():
-    topic_file = '/home/srivbane/shared/caringbridge/data/topic_model/site_topic_features.csv'
+    topic_file = '/home/srivbane/shared/caringbridge/data/dev/topic_model/topic_features_per_site.csv'
     other_features_file = None # this will point to mark's file
     health_condition_file = None # need to create this too, if it doesn't already exist. should have a column for site id and a column for health condition
 

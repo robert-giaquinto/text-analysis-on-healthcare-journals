@@ -28,7 +28,7 @@ def avg_by_site(infile, outfile):
         for i, line in enumerate(fin):
             if line == '\n':
                 break
-            if i % 1000 == 0:
+            if i % 1000000 == 0:
                 print(i)
             
             fields = line.replace('\n', '').split(',')
@@ -60,12 +60,28 @@ def avg_by_site(infile, outfile):
                 current_site = keys[0]
                 
 
+def concatenate_journals():
+    """
+    Better approach:
+    concatenate the terms from each journal for each site.
+    instead of giving each journal equal weight, this will give each word equal weight
+    """
+    pass
+        
+                
 
 def main():
-    data_dir = '/home/srivbane/shared/caringbridge/data/topic_model/'
-    infile = 'train_document_topic_probs.txt'
-    outfile = 'topic_features_per_site.csv'
-    avg_by_site(data_dir + infile, data_dir + outfile)
+    parser = argparse.ArgumentParser(description='Aggregate document topic probability matrix to give topic vectors for each site.')
+    parser.add_argument('-i', '--infile', type=str, help='File containing document topic probabilities.')
+    parser.add_argument('-o', '--outfile', type=str, help='Where to write the output of a topic probabilities for each site.')
+    parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
+    parser.set_defaults(verbose=False)
+    args = parser.parse_args()
+
+    print('aggregate_doc_topics.py')
+    print(args)
+    
+    avg_by_site(args.outfile, args.infile)
 
 
 

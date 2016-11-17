@@ -57,11 +57,19 @@ class FixedArray(object):
         self.keys = [[[] for d in range(num_docs)] for t in range(num_topics)]
 
     def add(self, topics, keys):
-        for t in range(num_topics):
-            for d in range(num_docs):
+        for t in range(self.num_topics):
+            for d in range(self.num_docs):
                 if topics[t] > self.topic_maxs[t][d]:
-                    self.topic_maxs[t] = self.topic_maxs[0:d] + [topics[t]] + self.topic_maxs[d:-1]
-                    self.keys[t] = self.keys[0:d] + keys + self.keys[d:-1]
+                    if 0 < d and d < self.num_docs:
+                        self.topic_maxs[t] = self.topic_maxs[t][0:d] + [topics[t]] + self.topic_maxs[t][d:-1]
+                        self.keys[t] = self.keys[t][0:d] + [keys] + self.keys[t][d:-1]
+                    elif 0 == d:
+                        self.topic_maxs[t] = [topics[t]] + self.topic_maxs[t][d:-1]
+                        self.keys[t] = [keys] + self.keys[t][d:-1]
+                    else:
+                        self.topic_maxs[t] = self.topic_maxs[0:d] + [topics[t]]
+                        self.keys[t] = self.keys[0:d] + [keys]
+                        
                     break
 
 
@@ -80,8 +88,9 @@ def select_docs_per_topic_by_max(infile, num_docs=1):
 
             farr.add(topic_dist, keys)
 
+    print(farr.keys)
     # convert the farr object to a list of tuples
-    keys_to_max = [(str(t), k) for t, key_arr in enumerate(self.keys) for k in key_arr]
+    keys_to_max = [(str(t), k) for t, key_arr in enumerate(farr.keys) for k in key_arr]
     return keys_to_max
                     
     
@@ -183,13 +192,13 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
     """
     # sort the keys so that they'll have same order as the parsed_journal_all.txt file
     topic_keys = sorted(topic_keys, key=lambda x: ''.join(x[1]))
-
+        
     # split keys into key and values
     topics, keys = zip(*topic_keys)
-
+    
     # get list of documents
     docs = extract_docs(keys, parsed_file)
-
+    
     # combine the topics docs for each topic
     rval = zip(topics, docs)
     return rval
@@ -200,13 +209,26 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
 
 
 def main():
-    data_dir = '/home/srivbane/shared/caringbridge/data/topic_model/'
-    lda_file = 'LDA_test_10000_train_13747900_topics_100.p'
+    data_dir = '/home/srivbane/shared/caringbridge/data/dev/topic_model/'
+    #lda_file = 'LDA_test_10000_train_13747900_topics_100.p'
+    lda_file = 'LDA_test_1000_train_999000_topics_50.p'
     parsed_journals_file = '/home/srivbane/shared/caringbridge/data/parsed_json/parsed_journal_all.txt'
     doc_top_file = data_dir + 'train_document_topic_probs.txt'
     stats_file = data_dir + 'kl_divergence_stats.txt'
     outfile = data_dir + 'top_doc_for_each_topic.txt'
 
+
+    # VERIFY THAT PARSED JOURNAL IS SORTED
+    check_sorted_cmd = """/bin/bash -c "sort -c %s -t $'\t' -k1,4 -S %s" """ % (parsed_journals_file, "80%")
+    try:
+        subprocess.check_call(check_sorted_cmd, shell=True)
+        print("File aleady sorted properly")
+    except subprocess.CalledProcessError as e:
+        # file isn't already sorted
+        print("Sorting file.")
+        cmd = """/bin/bash -c "sort %s -t $'\t' -k1,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (parsed_journals_file, parsed_journals_file, "80%")
+        subprocess.call(cmd, shell=True)
+    
     # load lda model
     print("Unpickling model")
     lda = unpickle_it(os.path.join(data_dir, lda_file))
@@ -221,25 +243,28 @@ def main():
         lda.save_doc_topic_probs(lda.docs.train_bow, lda.docs.train_keys, doc_top_file)
         
     # find the best documents for each topic
-    print("Computing KL stats for each doc")
-    compute_doc_topic_stats(doc_top_file, stats_file)
-    topic_keys = select_docs_per_topic_by_kl(stats_file, 3)
+    #print("Computing KL stats for each doc")
+    #compute_doc_topic_stats(doc_top_file, stats_file)
+    #topic_keys = select_docs_per_topic_by_kl(stats_file, 3)
     print("Selecting best doc matches via max")
-    max_topic_keys = select_docs_per_topic_by_max(doc_top_file)
+    max_topic_keys = select_docs_per_topic_by_max(doc_top_file, num_docs=3)
+    print(max_topic_keys)
+    print(len(max_topic_keys))
     
     # extract these documents
-    print("Extracting docs for each topic")
-    doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
-    print(doc_topics[0])
+    #print("Extracting docs for each topic")
+    #doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
+    #print(doc_topics[0])
 
     print("Extracting docs for each topic via max approach")
     max_doc_topics = extract_best_docs_per_topic(max_topic_keys, parsed_journals_file)
-    print(max_doc_topics[0])
+    print(len(max_doc_topics))
+    print(max_doc_topics[0:2])
 
     # write out results to a file
-    with open(outfile, 'wb') as fout:
-        for topic, doc in doc_topics:
-            fout.write(topic + "\t" + doc + "\n")
+    #with open(outfile, 'wb') as fout:
+    #    for topic, doc in doc_topics:
+    #        fout.write(topic + "\t" + doc + "\n")
 
     with open(outfile.replace("top_docs", "max_top_docs"), 'wb') as fout:
         for topic, doc in max_doc_topics:

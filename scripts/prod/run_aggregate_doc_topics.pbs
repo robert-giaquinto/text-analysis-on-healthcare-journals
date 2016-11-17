@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -l walltime=12:00:00,nodes=1:ppn=1,mem=8gb
+#PBS -q lab
+#PBS -o aggregate_doc_topics.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N aggregate_doc_topics
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+DD=/home/srivbane/shared/caringbridge/data/topic_model/
+python -m src.topic_model.aggregate_doc_topics --infile ${DD}train_document_topic_probs.txt --outfile ${DD}topic_features_per_site.csv

@@ -332,7 +332,7 @@ class GensimLDA(object):
         Returns: Nothing, results written to file
         """
         with open(output_filename, "wb") as fout:
-            chunk_stream = utils.grouper(bow_generator, chunksize=25000, as_numpy=False)
+            chunk_stream = utils.grouper(bow_generator, chunksize=50000, as_numpy=False)
             for chunk in chunk_stream:
                 topic_dist = self.get_theta(list(chunk))
                 for doc_keys, td in zip(keys_generator, topic_dist):
