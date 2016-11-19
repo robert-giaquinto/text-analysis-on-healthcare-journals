@@ -5,6 +5,11 @@ from math import ceil, log
 from gensim import models, utils
 import numpy as np
 import logging
+import multiprocessing as mp
+from Queue import Empty as QueueEmpty
+from Queue import Full as QueueFull
+import subprocess
+import itertools
 
 from src.topic_model.documents import Documents
 from src.utilities import pickle_it
@@ -310,8 +315,80 @@ class GensimLDA(object):
                 for word_probs in betas:
                     f.write(','.join([str(p) for p in word_probs]) + "\n")
 
-                    
-                    
+
+    def save_doc_topic_probs_parallel(self, bow_generator, keys_generator, output_filename):
+        # to save on memory, each work will be assigned 10 chunks
+        tasks_per_worker = 25
+        num_docs = len(bow_generator)
+        # divide the total documents by number of tasks being assigned
+        chunksize = ceil(1.0 * num_docs / (tasks_per_worker  * self.n_workers))
+        chunk_stream = utils.grouper(bow_generator, chunksize=chunksize, as_numpy=False)
+        keys_stream = utils.grouper(keys_generator, chunksize=chunksize, as_numpy=False)
+
+        # where should the partial results be saved to?
+        data_dir = os.path.join(os.path.split(output_filename)[0], 'doc_topic_shards/')
+        if not os.path.isdir(data_dir):
+            os.makedirs(data_dir)
+        
+        partial_files = [os.path.join(data_dir, 'doc_topic_' + str(i) + '.txt') for i in range(tasks_per_worker * self.n_workers)]
+        
+        # setup multiprocessing pool
+        #pool = mp.Pool(processes=self.n_workers)
+        #pool.map(_doc_topic_worker, itertools.izip(chunk_stream, keys_stream, partial_files, itertools.repeat(self.model)))
+        queue = mp.Queue(maxsize=self.n_workers)
+        result = mp.Queue()
+        for worker in range(self.n_workers):
+            mp.Process(target=_handler, args=(queue,result,)).start()
+
+        sent_len = 0
+        rec_len = 0
+        itr = itertools.izip(chunk_stream, keys_stream, partial_files, itertools.repeat(self.model))
+        try:
+            value = itr.next()
+            while True:
+                try:
+                    queue.put((_doc_topic_worker, value))
+                    sent_len += 1
+                    value = itr.next()
+                except QueueFull:
+                    logger.info("queue full")
+                    while True:
+                        try:
+                            rval = result.get(False)
+                            rec_len += 1
+                        except QueueEmpty:
+                            break
+        except StopIteration:
+            pass
+
+        # collect remaining results
+        while rec_len < sent_len:
+            rval = result.get()
+            rec_len += 1
+
+        # terminate workers
+        for worker in range(self.n_workers):
+            queue.put('STOP')
+        
+        # close out queue and workers
+        logger.info("closing out pool")
+        queue.close()
+        queue.join_thread()
+
+        # concatenate results
+        logger.info("concatenating partial results")
+        cmd = "cat "
+        for f in partial_files:
+            cmd += f + ' '
+
+        cmd += "> " + output_filename
+        try:
+            subprocess.call(cmd, shell=True)
+        except:
+            print(cmd)
+            raise Exception("Couldn't concatenate these files: " + ', '.join(partial_files))
+
+
     def save_doc_topic_probs(self, bow_generator, keys_generator, output_filename):
         """
         Save the probability distribution of topics over each of the documents
@@ -442,6 +519,74 @@ def get_word_counts(x, vocab):
                 token2freq[term] += freq
         doc_token2freq.append(dict(term_freq_pairs))
     return token2freq, doc_token2freq
+
+
+# function run by worker processes
+def _handler(input, output):
+    for func, args in iter(input.get, 'STOP'):
+        result = func(*args)
+        output.put(result)
+
+
+def pool_imap_unordered(function, iterable, procs):
+    # Create queues for sending/receiving items from iterable.
+    sendq = Queue(procs)
+    recvq = Queue()
+
+    # Start worker processes.
+    for rpt in xrange(procs):
+        Process(target=_handler, args=(sendq, recvq)).start()
+
+    # Iterate iterable and communicate with worker processes.
+    send_len = 0
+    recv_len = 0
+    itr = iter(iterable)
+    try:
+        value = itr.next()
+        while True:
+            try:
+                sendq.put((function, value), True, 0.1)
+                send_len += 1
+                value = itr.next()
+            except QueueFull:
+                while True:
+                    try:
+                        result = recvq.get(False)
+                        recv_len += 1
+                        yield result
+                    except QueueEmpty:
+                        break
+    except StopIteration:
+        pass
+
+    # Collect all remaining results.
+    while recv_len < send_len:
+        result = recvq.get()
+        recv_len += 1
+        yield result
+
+    # Terminate worker processes.
+    for rpt in xrange(procs):
+        sendq.put(None)
+
+        
+def _doc_topic_worker(bow_chunk, keys_chunk, output_file, lda):
+    """
+    helper function for computing doc_topics in parallel and writing
+    results to a file
+    """
+    # unpack info
+    logger.info("init worker %d", os.getpid())
+    logger.info("found a chunk of len: %d", len(bow_chunk))
+    gamma, _ = lda.inference(list(bow_chunk), collect_sstats=False)
+    logger.info("inference finished, writing to file...")
+    with open(output_file, 'wb') as fout:
+        for keys, topic_vec in zip(keys_chunk, gamma):
+            topic_vec = topic_vec / sum(topic_vec)  # normalize
+            fout.write(','.join(keys) + "," + ','.join([str(prob) for prob in topic_vec]) + "\n")
+    logger.info("worker done!")
+
+
 
 
 def main():

@@ -43,10 +43,18 @@ def main():
                      keep_n=args.keep_n,
                      num_docs=args.num_docs,
                      verbose=args.verbose)
-    model._init_docs(docs)    
-    model.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
-    if args.num_test > 0:
-        model.save_doc_topic_probs(docs.test_bow, docs.test_keys, os.path.join(args.data_dir, "test_document_topic_probs.txt"))
+    
+    model._init_docs(docs)
+
+    if args.n_workers == 1:
+        model.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+        if args.num_test > 0:
+            model.save_doc_topic_probs(docs.test_bow, docs.test_keys, os.path.join(args.data_dir, "test_document_topic_probs.txt"))
+    else:
+        print("running in parallel")
+        model.n_workers = args.n_workers
+        model.save_doc_topic_probs_parallel(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+        
     
 
 if __name__ == '__main__':
