@@ -59,7 +59,7 @@ class Documents(object):
         prefix = os.path.splitext(os.path.split(journal_file)[-1])[0]
         self.train_shard_file = os.path.join(os.path.dirname(journal_file), prefix + "_shards", prefix + "_01_of_2.txt")
         self.train_keys = None
-        self.test_shard_file = os.path.join(os.path.dirname(journal_file) + "_shards", prefix + "_02_of_2.txt")
+        self.test_shard_file = os.path.join(os.path.dirname(journal_file), prefix + "_shards", prefix + "_02_of_2.txt")
         self.test_keys = None
         # name of file where MatrixMarket bag-of-words data is stored
         self.train_file = os.path.join(self.data_dir, "train_bow_for_" + prefix + "_with_" + str(num_test) + "_test_docs_" + str(keep_n) + "_terms.mm")

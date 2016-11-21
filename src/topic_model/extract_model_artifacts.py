@@ -21,21 +21,24 @@ def main():
     parser.set_defaults(verbose=False)
     args = parser.parse_args()
 
-    print('extract_model_artifacts.py')
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(format='%(name)s : %(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    
+    logger.info('extract_model_artifacts.py')
     print(args)
 
     lda_file = 'LDA_test_' + str(args.num_test) + '_train_' + str(args.num_docs - args.num_test) + '_topics_' + str(args.num_topics) + '.p'
-    print("Unpickling model")
+    logger.info("Unpickling model:", lda_file)
     model = unpickle_it(os.path.join(args.data_dir, lda_file))
     model.topic_term_method = 'unweighted'
     model.topic_terms = model._unweighted_topic_terms()
     
-    print("Saving word topic probabilities")
+    logger.info("Saving word topic probabilities")
     model.save_word_topic_probs(os.path.join(args.data_dir, "unranked_word_topic_probs.txt"), metric="none")
-    print("Saving topic terms")
+    logger.info("Saving topic terms")
     model.save_topic_terms(os.path.join(args.data_dir, "unranked_unweighted_topic_terms.txt"), metric="none")
 
-    print("Saving doc topics")
+    logger.info("Initializing documents")
     docs = Documents(journal_file=args.journal_file,
                      num_test=args.num_test,
                      data_dir=args.data_dir,
@@ -43,10 +46,21 @@ def main():
                      keep_n=args.keep_n,
                      num_docs=args.num_docs,
                      verbose=args.verbose)
-    model._init_docs(docs)    
-    model.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
-    if args.num_test > 0:
-        model.save_doc_topic_probs(docs.test_bow, docs.test_keys, os.path.join(args.data_dir, "test_document_topic_probs.txt"))
+    
+    model._init_docs(docs)
+
+    if args.n_workers == 1:
+        logger.info("Saving document topics serially")
+        model.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+        if args.num_test > 0:
+            model.save_doc_topic_probs(docs.test_bow, docs.test_keys, os.path.join(args.data_dir, "test_document_topic_probs.txt"))
+    else:
+        logger.info("Saving document topics in parallel")
+        model.n_workers = args.n_workers
+        model.save_doc_topic_probs_parallel(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
+        if args.num_test > 0:
+            model.save_doc_topic_probs_parallel(docs.test_bow, docs.test_keys, os.path.join(args.data_dir, "test_document_topic_probs.txt"))
+        
     
 
 if __name__ == '__main__':
