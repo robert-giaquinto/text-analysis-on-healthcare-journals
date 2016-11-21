@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -l walltime=24:00:00,nodes=1:ppn=16,mem=62gb
+#PBS -l walltime=4:00:00,nodes=1:ppn=16,mem=62gb
 #PBS -q small
 #PBS -o extract_artifacts.log
 #PBS -m abe
