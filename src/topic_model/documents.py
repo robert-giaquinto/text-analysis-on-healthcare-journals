@@ -21,13 +21,14 @@ class Documents(object):
     used creating the vocabulary, and storing/loading the BOW data
     without needed to rebuild the BOW every time
     """
-    def __init__(self, journal_file, num_test, data_dir=None, keep_n=25000, rebuild=True, num_docs=None, shuffle=True, verbose=False):
+    def __init__(self, journal_file, num_test, data_dir=None, keep_n=25000, no_above=0.9, rebuild=True, num_docs=None, shuffle=True, verbose=False):
         """
         Args:
             journal_file: full file name of the big flat file of all tokenized journals and their keys.
             num_test: How many of the documents to hold out in a test set for evaluation
             data_dir: folder to save the output vocab and bow files.
             keep_n: number of terms to keep in the vocabulary.
+            no_above: drop all terms appearing in at least no_above of the documents from the dictionary.
             rebuild: true to rewrite the output files, false to use existing files (if they exist)
             num_docs: Number of documents in the journal file. Specifying this can speed things up, if you know it.
             verbose: print progress to log
@@ -38,6 +39,7 @@ class Documents(object):
 
         self.journal_file = journal_file
         self.keep_n = keep_n
+        self.no_above = no_above
         self.rebuild = rebuild
         self.num_docs = num_docs
         self.num_train = None
@@ -110,8 +112,8 @@ class Documents(object):
         """
         self.vocab = corpora.Dictionary(tokens for tokens in JournalTokens(self.journal_file))
         if self.keep_n is not None:
-            # a term cannot appear in more than 90% of docs and only keep the top keep_n terms (remaining)
-            self.vocab.filter_extremes(no_below=1, no_above=0.75, keep_n=self.keep_n)
+            # a term cannot appear in more than no_above of docs and only keep the top keep_n terms (remaining)
+            self.vocab.filter_extremes(no_below=1, no_above=self.no_above, keep_n=self.keep_n)
             self.vocab.compactify()
 
         # save the dictionary for next time
@@ -178,6 +180,7 @@ def main():
     parser.add_argument('-j', '--journal_file', type=str, help='Full path to the journal file to extract tokens from.')
     parser.add_argument('-d', '--data_dir', type=str, help='Directory of where to save or load bag-of-words vocabulary files.')
     parser.add_argument('-k', '--keep_n', type=int, help='How many terms (max) to keep in the dictionary file.')
+    parser.add_argument('-a', '--no_above', type=float, default=0.9, help='Drop any terms appearing in at least this proportion of the documents.')
     parser.add_argument('--num_test', type=int, default=0, help="Number of documents to hold out for the test set.")
     parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
@@ -197,6 +200,7 @@ def main():
                      data_dir=args.data_dir,
                      rebuild=args.rebuild,
                      keep_n=args.keep_n,
+                     no_above=args.no_above,
                      num_docs=args.num_docs,
                      shuffle=args.shuffle, verbose=args.verbose)
     docs.fit()

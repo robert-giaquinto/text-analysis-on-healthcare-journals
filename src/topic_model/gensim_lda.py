@@ -552,6 +552,7 @@ def main():
     parser.add_argument('-j', '--journal_file', type=str, help='Full path to the journal file to extract tokens from.')
     parser.add_argument('-d', '--data_dir', type=str, help='Directory of where to save or load bag-of-words, vocabulary, and model performance files.')
     parser.add_argument('-k', '--keep_n', type=int, help='How many terms (max) to keep in the dictionary file.')
+    parser.add_argument('--no_above', type=float, default=0.9, help='Drop any terms appearing in at least this proportion of the documents.')
     parser.add_argument('--num_test', type=int, default=0, help="Number of documents to hold out for the test set.")
     parser.add_argument('--num_docs', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
     parser.add_argument('--num_topics', type=int, nargs='+', default=[25], help="Number of topics to extract. Multiple arguments can be given to test a range of parameters.")
@@ -578,6 +579,7 @@ def main():
                      data_dir=args.data_dir,
                      rebuild=args.rebuild,
                      keep_n=args.keep_n,
+                     no_above=args.no_above,
                      num_docs=args.num_docs,
                      shuffle=args.shuffle,
                      verbose=args.verbose)
