@@ -69,9 +69,8 @@ class FixedArray(object):
                     else:
                         self.topic_maxs[t] = self.topic_maxs[0:d] + [topics[t]]
                         self.keys[t] = self.keys[0:d] + [keys]
-                        
+                            
                     break
-
 
 
 def select_docs_per_topic_by_max(infile, num_docs=1):
@@ -86,9 +85,12 @@ def select_docs_per_topic_by_max(infile, num_docs=1):
                 num_topics = len(topic_dist)
                 farr = FixedArray(num_docs=num_docs, num_topics=num_topics)
 
-            farr.add(topic_dist, keys)
+            if len(topic_dist) == num_topics:
+                farr.add(topic_dist, keys)
+            else:
+                print("Num topics in this line: %d.\n\t%s" % (len(topic_dist), line))
+                continue
 
-    print(farr.keys)
     # convert the farr object to a list of tuples
     keys_to_max = [(str(t), k) for t, key_arr in enumerate(farr.keys) for k in key_arr]
     return keys_to_max
@@ -109,7 +111,7 @@ def select_docs_per_topic_by_kl(stat_file, num_docs):
     Returns: A list of topic, key pairs
     """
     # sort the stat_file by topic number and then kl-divergence
-    cmd = """/bin/bash -c "sort -rn %s -t $',' -k5,6 -o %s -S %s" """ % (stat_file, stat_file, "50%")
+    cmd = """/bin/bash -c "sort -rn %s -t $',' -k5,6 -o %s -S %s" """ % (stat_file, stat_file, "75%")
     subprocess.call(cmd, shell=True)
 
     # loop through the file grabbing the top document keys for each topic
@@ -150,7 +152,8 @@ def sanitize_docs(doc):
 
     For now it should suffice to simply remove html formatting (if it exists)
     """
-    rval = re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", doc))
+    # remove html, special characters, and excess whitespace
+    rval = re.sub(r"\s+", " ", re.sub(r"<[^>]*>", " ", re.sub(r"\&[a-z]+;", " ", doc)))
     return rval
 
 
@@ -199,8 +202,8 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
     # get list of documents
     docs = extract_docs(keys, parsed_file)
     
-    # combine the topics docs for each topic
-    rval = zip(topics, docs)
+    # combine the topics, docs, and keys
+    rval = zip(topics, docs, keys)
     return rval
 
 
@@ -209,14 +212,21 @@ def extract_best_docs_per_topic(topic_keys, parsed_file):
 
 
 def main():
-    data_dir = '/home/srivbane/shared/caringbridge/data/dev/topic_model/'
-    #lda_file = 'LDA_test_10000_train_13747900_topics_100.p'
-    lda_file = 'LDA_test_1000_train_999000_topics_50.p'
+    dev = False
+    if dev:
+        data_dir = '/home/srivbane/shared/caringbridge/data/dev/topic_model/'
+        lda_file = 'LDA_test_1000_train_999000_topics_50.p'
+    else:
+        data_dir = '/home/srivbane/shared/caringbridge/data/topic_model_no_names/'
+        lda_file = 'LDA_test_10000_train_13747900_topics_100.p'
+    
     parsed_journals_file = '/home/srivbane/shared/caringbridge/data/parsed_json/parsed_journal_all.txt'
     doc_top_file = data_dir + 'train_document_topic_probs.txt'
     stats_file = data_dir + 'kl_divergence_stats.txt'
-    outfile = data_dir + 'top_doc_for_each_topic.txt'
-
+    n_workers = 2
+    num_docs = 5
+    kl_outfile = data_dir + 'top_' + str(num_docs) + '_docs_for_each_topic_by_kl.txt'
+    max_outfile = data_dir + 'top_' + str(num_docs) + '_docs_for_each_topic_by_max.txt'
 
     # VERIFY THAT PARSED JOURNAL IS SORTED
     check_sorted_cmd = """/bin/bash -c "sort -c %s -t $'\t' -k1,4 -S %s" """ % (parsed_journals_file, "80%")
@@ -230,6 +240,7 @@ def main():
         subprocess.call(cmd, shell=True)
     
     # load lda model
+    # TODO: would be better to create a new documents object and run on this data rather than the data used in training the model
     print("Unpickling model")
     lda = unpickle_it(os.path.join(data_dir, lda_file))
     lda.docs.load_bow()
@@ -240,35 +251,38 @@ def main():
     if doc_top_file is None:
         print("Building a new document topic matrix")
         doc_top_file = os.path.join(data_dir, "train_document_topic_probs.txt")
-        lda.save_doc_topic_probs(lda.docs.train_bow, lda.docs.train_keys, doc_top_file)
+        if n_workers == 1:
+            lda.save_doc_topic_probs(lda.docs.train_bow, lda.docs.train_keys, doc_top_file)
+        else:
+            lda.n_workers = n_workers
+            lda.model.minimum_probability = 0.0
+            lda.save_doc_topic_probs_parallel(lda.docs.train_bow, lda_docs.train_keys, doc_topic_file)
         
     # find the best documents for each topic
-    #print("Computing KL stats for each doc")
-    #compute_doc_topic_stats(doc_top_file, stats_file)
-    #topic_keys = select_docs_per_topic_by_kl(stats_file, 3)
+    print("Computing KL stats for each doc")
+    compute_doc_topic_stats(doc_top_file, stats_file)
+    print("Selecting best doc using KL divergence")
+    topic_keys = select_docs_per_topic_by_kl(stats_file, num_docs)
+
     print("Selecting best doc matches via max")
-    max_topic_keys = select_docs_per_topic_by_max(doc_top_file, num_docs=3)
-    print(max_topic_keys)
-    print(len(max_topic_keys))
+    max_topic_keys = select_docs_per_topic_by_max(doc_top_file, num_docs)
+
     
     # extract these documents
-    #print("Extracting docs for each topic")
-    #doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
-    #print(doc_topics[0])
+    print("Extracting docs for each topic via KL divergence approach")
+    doc_topics = extract_best_docs_per_topic(topic_keys, parsed_journals_file)
 
     print("Extracting docs for each topic via max approach")
     max_doc_topics = extract_best_docs_per_topic(max_topic_keys, parsed_journals_file)
-    print(len(max_doc_topics))
-    print(max_doc_topics[0:2])
 
     # write out results to a file
-    #with open(outfile, 'wb') as fout:
-    #    for topic, doc in doc_topics:
-    #        fout.write(topic + "\t" + doc + "\n")
+    with open(kl_outfile, 'wb') as fout:
+        for topic, doc, keys in doc_topics:
+            fout.write(topic + "\t" + "\t".join(keys) + "\t" + doc + "\n")
 
-    with open(outfile.replace("top_docs", "max_top_docs"), 'wb') as fout:
-        for topic, doc in max_doc_topics:
-            fout.write(topic + "\t" + doc + "\n")
+    with open(max_outfile, 'wb') as fout:
+        for topic, doc, keys in max_doc_topics:
+            fout.write(topic + "\t" + "\t".join(keys) + "\t" + doc + "\n")
 
 
 if __name__ == "__main__":

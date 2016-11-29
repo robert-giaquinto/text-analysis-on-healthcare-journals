@@ -32,6 +32,7 @@ def main():
     model = unpickle_it(os.path.join(args.data_dir, lda_file))
     model.topic_term_method = 'unweighted'
     model.topic_terms = model._unweighted_topic_terms()
+    model.model.minimum_probability = 0.0
     
     logger.info("Saving word topic probabilities")
     model.save_word_topic_probs(os.path.join(args.data_dir, "unranked_word_topic_probs.txt"), metric="none")
