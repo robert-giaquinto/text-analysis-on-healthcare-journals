@@ -1,15 +1,17 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegressionCV
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import preprocessing
 
 def load_topic_features(infile):
     """
     load the topic features dataset and give it appropriate column labels
     """
-    df = pd.read_csv(infile)
+    df = pd.read_csv(infile, nrows=100000)
     num_topics = df.shape[1] - 1
     col_names = ['site_id'] + ['topic' + str(t) for t in range(num_topics)]
     df.columns = col_names
@@ -21,7 +23,6 @@ def load_data(topic_file, keywords_and_hc_file):
     load the two data files and merge them
     """
     topic_df = load_topic_features(topic_file)
-    print(topic_df.head())
 
     col_names = ['site_id', 'health_condition',
                  "cancer", "surgery", "injury", "breast", "stroke", "brain",
@@ -29,7 +30,6 @@ def load_data(topic_file, keywords_and_hc_file):
                  "ovarian", "bone", "kidney", "myeloma", "skin", "bladder", "esophageal", "blank"]
     hc_df = pd.read_csv(keywords_and_hc_file, sep='\t', header=None, names=col_names)
     hc_df.drop('blank', axis=1, inplace=True)
-    print(hc_df.head())
 
     rval = pd.merge(topic_df, hc_df, on=['site_id'], how='inner', sort=False)
     return rval
@@ -41,27 +41,36 @@ def split_data(df, test_size=0.25, random_seed=None):
     split the data, but set aside the site_id in case we want that later
     """
     # split data into x (data features) and y (health condition)
-    feats = [c for c in list(df.columns.values) if c != 'health_condition']
-    x = df[feats]
-    y = df['health_condition']
+    feats = [c for c in list(df.columns.values) if c != 'health_condition' and c != 'site_id']
+    x = df[feats].values
+    y = df['health_condition'].values
 
     # convert y from labels to a binary matrix (each column shows True/False that column is a specific label)
     # http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.LabelBinarizer.html#sklearn.preprocessing.LabelBinarizer
     #lb = preprocessing.LabelBinarizer()
     #y_mat = lb.fit_transform(y)
-
     
     # call function to split observations (e.g. 66% of data in train, 33% in test)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = test_size, random_state=random_seed)
     
-    # save site id as an numpy array and remove it from the dataset
-    site_id_train = x_train['site_id'].values
-    site_id_test = x_test['site_id'].values
-    x_train.drop('site_id', axis=1, inplace=True)
-    x_test.drop('site_id', axis=1, inplace=True)
     # return all the partitions, convert to numpy arrays if they aren't already
-    return site_id_train, x_train.values, y_train, site_id_test, x_test.values, y_test
+    return x_train, y_train, x_test, y_test
 
+
+def run_grid_search(X, y, model, param_grid, cv=5, n_jobs=1, verbose=0):
+    """
+    Train a model for a range of model parameters (i.e. see how model
+    performs depending on how complex you allow the model to become).
+    """
+    grid_search = GridSearchCV(model, param_grid=param_grid, cv=cv, n_jobs=n_jobs, verbose=verbose,  return_train_score=False)
+    grid_search.fit(X, y)
+    res = grid_search.cv_results_
+    print("\nAverage percent of labels correctly classified on hold-out set during cross-validation:")
+    for ps, sco, sd, t in zip(res['params'], res['mean_test_score'], res['std_test_score'], res['mean_fit_time']):
+        print("Params:", ps, "\tScore:", round(sco, 3), "\t(stdev: " + str(round(sd, 3)) + "), Time to fit:\t", t, "seconds")
+
+    print("Model that generalizes best found to use:", grid_search.best_params_)
+    return grid_search.best_estimator_
 
 
 
@@ -79,35 +88,77 @@ def main():
     print("Size of dataset:", df.shape)
 
     # save the custom answers for prediction later
-    custom_df = df[df.health_condition.isin(custom_conditions),].reset_index()
+    custom_df = df[df['health_condition'].isin(custom_conditions)]
     print("size of custom df:", custom_df.shape)
-    df = df[-df.health_condition.isin(custom_conditions),].reset_index()
+    df = df[-df['health_condition'].isin(custom_conditions)]
     print("Size of data available for training:", df.shape)
 
     # split the data into training and test
     print("splitting a portion of the data off for testing later...")
     test_size = 0.25
-    site_id_train, x_train, y_train, site_id_test, x_test, y_test = split_data(df, test_size, random_seed)
-    
-    # train lasso model
-    # logistic regression mean we are training a classifier (i.e. a label versus a real valued output)
-    # using penalty = 'L1' means this will do the lasso algorithm we talked about
-    print("Training lasso")
-    lasso = LogisticRegressionCV(Cs=25, cv=5, penalty = 'l1', solver='liblinear', n_jobs=2)
-    lasso.fit(x_train, y_train)
-    lasso.score(x_test, y_test)
+    x_train, y_train, x_test, y_test = split_data(df, test_size, random_seed)
 
-    # todo visualize performance
+
+    # variables for training:
+    cv = 5
+    n_jobs = 2 # make this 16 if submitting via qsub
+    verbose = 1
+
+    
+    # train logisitic regression model
+    # logistic regression mean we are training a classifier (i.e. a label versus a real valued output)
+    print("\nFinding optimal logistic regression")
+    logit_param_grid = {'penalty': ['l2'],
+                        'solver': ['lbfgs'],
+                        'C': [0.001, 0.01, 0.1, 1, 10, 50, 100, 500]}
+    logit = run_grid_search(X=x_train, y=y_train,
+                            model=LogisticRegression(random_state=random_seed),
+                            param_grid=logit_param_grid,
+                            cv=cv, n_jobs=n_jobs, verbose=verbose)
+    print("Best logistic regression performance on test set:", logit.score(x_test, y_test))
+    
+
+    # decision tree
+    print("\nFinding optimal decision tree")
+    dt_param_grid = {"min_samples_split": [2],
+                     "max_depth": [None, 2, 5, 10]}
+    # do cross validation to determine optimal parameters to the model
+    dt = run_grid_search(X=x_train, y=y_train,
+                         model=DecisionTreeClassifier(random_state=random_seed),
+                         param_grid=dt_param_grid,
+                         cv=cv, n_jobs=n_jobs, verbose=verbose)
+    # train a model on the full training set using the optimal parameters
+    print("Best decision tree performance on test set:", dt.score(x_test, y_test))
+
 
     
 
     # train random forest
+    print("\nFinding optimal random forest")
+    rf_param_grid = {"max_features": ['sqrt', 'log2', None],
+                     "max_depth": [None]}
+    # do cross validation to determine optimal parameters to the model
+    rf = run_grid_search(X=x_train, y=y_train,
+                         model=RandomForestClassifier(n_estimators=100, random_state=random_seed),
+                         param_grid=rf_param_grid,
+                         cv=cv, n_jobs=n_jobs, verbose=verbose)
+    # train a model on the full training set using the optimal parameters
+    print("Best random forest performance on test set:", rf.score(x_test, y_test))
 
+    
 
     # train k-nearest neighbors
 
 
 
     # which is best?
+
+    # can we plot results?
+
+    # can we use the pred_proba() method to find probability of each class?
+    # when can be we coonfident enough that the model predicts correctly?
+
+    # are there certain health conditions that are easy to predict? See "confusion matrix"
+    
 if __name__ == "__main__":
     main()

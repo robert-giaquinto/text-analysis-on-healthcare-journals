@@ -180,6 +180,9 @@ class GensimLDA(object):
                                                       perplexity_threshold=perplexity_threshold,
                                                       evals_per_pass=evals_per_pass,
                                                       chunksize=c)
+                
+                model.save(os.path.join(self.docs.data_dir, "LDA_docs_" + str(self.num_docs) + "_topics_" + str(n) + "_chucksize_" + str(c) + ".lda")
+                
                 performance.append({'num_topics': n,
                                     'chunksize': c,
                                     'perplexities': convergence['perplexities'],

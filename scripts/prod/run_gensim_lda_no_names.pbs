@@ -8,6 +8,6 @@
 module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
-cd ~/text-analysis/scripts
+cd ~/text-analysis/scripts/logs
 DD=/home/srivbane/shared/caringbridge/data/
-python -m src.topic_model.gensim_lda --journal_file ${DD}clean_journals/clean_journals_no_names.txt --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --num_topics 100 --chunksizes 2048 --threshold 0.0 --n_workers 16 --evals_per_pass 25 --log --no_score
+python -m src.topic_model.gensim_lda --journal_file ${DD}clean_journals/clean_journals_no_names.txt --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --num_topics 50 100 150 200 300 --chunksizes 2048 --threshold 0.0 --n_workers 16 --evals_per_pass 25 --log --no_score

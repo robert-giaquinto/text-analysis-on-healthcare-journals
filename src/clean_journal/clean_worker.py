@@ -66,39 +66,60 @@ class JournalCleaningWorker(object):
 
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
-        custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really'] + list('abcdefghjklmnopqrstuvwxyz')
+        custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really',
+                            'didnt', 'cant', 'thats', 'doesnt', 'didnt', 'wont', 'wasnt', 'hows',
+                            'hadnt', 'hasnt', 'willnt', 'isnt', 'arent', 'werent', 'havent',
+                            'wouldnt', 'couldnt', 'shouldnt',  'shouldve', 'couldve', 'wouldve', 
+                            'theres', 'whats', 'whens', 'whos', 'wheres'] + list('abcdefghjklmnopqrstuvwxyz')
         self.first = FirstNames()
-        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves', u'you', u'your', u'yours', u'yourself', u'yourselves', u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'against', u'through', u'during', u'before', u'after', u'above', u'below', u'up', u'down', u'over', u'under', u'again', u'further', u'what',  u'where', u'why']
+        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves',
+                         u'they', u'them', u'themselves',
+                         u'you', u'your', u'yours', u'yourself', u'yourselves',
+                         u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself',
+                         u'against', u'through', u'during', u'before', u'after', u'above', u'below',
+                         u'up', u'down', u'over', u'under', u'again', u'why']
         self.stopword_set = set([w for w in base_stopwords + custom_stopwords if w not in not_stopwords])
 
-        self.split_dash1 = re.compile(r"([a-zA-Z])([\-/])([a-zA-Z])")
-        self.split_dash2 = re.compile(r"([0-9])([\-/])([a-zA-Z])")
-        self.split_dash3 = re.compile(r"([a-zA-Z])([\-/])([0-9])")
+        self.split_dash1 = re.compile(r"([a-z])([\-/])([a-z])", re.IGNORECASE)
+        self.split_dash2 = re.compile(r"([0-9])([\-/])([a-z])", re.IGNORECASE)
+        self.split_dash3 = re.compile(r"([a-z])([\-/])([0-9])", re.IGNORECASE)
+        self.weekend = re.compile(r"week\-end[a-z]*[ ,\.]", re.IGNORECASE)
+        self.xray = re.compile(r"x-ray[a-z]*[ ,\.]|xray[a-z]*[ ,\.]|x ray[a-z]*[ ,\.]", re.IGNORECASE)
+        self.email = re.compile(r"e-mail[a-z][ ,\.]* |email[a-z]*[ ,\.]", re.IGNORECASE)
+        
         self.punct = re.compile(r"[^a-zA-Z_ ]") # keeping _'s in so we can use them as a special identifier
 
         # search for contractions
-        self.iam = re.compile(r"'m")
-        self.willnot = re.compile(r"won't")
-        self.cannot = re.compile(r"can't")
-        self.itis = re.compile(r"it's")
-        self.letus = re.compile(r"let's")
-        self.heis = re.compile(r"he's")
-        self.howis = re.compile(r"how's")
-        self.thatis = re.compile(r"that's")
-        self.thereis = re.compile(r"there's")
-        self.whatis = re.compile(r"what's")
-        self.whereis = re.compile(r"where's")
-        self.whenis = re.compile(r"when's")
-        self.whois = re.compile(r"who's")
-        self.whyis = re.compile(r"why's")
-        self.youall = re.compile(r"y'all|ya'll")
-        self.youare = re.compile(r"you're")
-        self.would = re.compile(r"'d")
-        self.has = re.compile(r"'s")
-        self.nt = re.compile(r"n't")
-        self.will = re.compile(r"'ll")
-        self.have = re.compile(r"'ve")
-        self.s_apostrophe = re.compile(r"s' ")
+        self.im = re.compile(r"im", re.IGNORECASE)
+        self.iam = re.compile(r"'m", re.IGNORECASE)
+        self.ill = re.compile(r"ill", re.IGNORECASE)
+        self.youll = re.compile(r"youll", re.IGNORECASE)
+        self.ive = re.compile(r"ive", re.IGNORECASE)
+        self.hes = re.compile(r"hes", re.IGNORECASE)
+        self.shes = re.compile(r"shes", re.IGNORECASE)
+        self.weve = re.compile(r"weve", re.IGNORECASE)
+        self.youve = re.compile(r"youve", re.IGNORECASE)
+        self.willnot = re.compile(r"won't", re.IGNORECASE)
+        self.cannot = re.compile(r"can't", re.IGNORECASE)
+        self.itis = re.compile(r"it's", re.IGNORECASE)
+        self.letus = re.compile(r"let's", re.IGNORECASE)
+        self.heis = re.compile(r"he's", re.IGNORECASE)
+        self.howis = re.compile(r"how's" re.IGNORECASE)
+        self.thatis = re.compile(r"that's", re.IGNORECASE)
+        self.thereis = re.compile(r"there's", re.IGNORECASE)
+        self.whatis = re.compile(r"what's", re.IGNORECASE)
+        self.whereis = re.compile(r"where's", re.IGNORECASE)
+        self.whenis = re.compile(r"when's", re.IGNORECASE)
+        self.whois = re.compile(r"who's", re.IGNORECASE)
+        self.whyis = re.compile(r"why's", re.IGNORECASE)
+        self.youall = re.compile(r"y'all|ya'll", re.IGNORECASE)
+        self.youare = re.compile(r"you're", re.IGNORECASE)
+        self.would = re.compile(r"'d", re.IGNORECASE)
+        self.has = re.compile(r"'s", re.IGNORECASE)
+        self.nt = re.compile(r"n't", re.IGNORECASE)
+        self.will = re.compile(r"'ll", re.IGNORECASE)
+        self.have = re.compile(r"'ve", re.IGNORECASE)
+        self.s_apostrophe = re.compile(r"s' ", re.IGNORECASE)
 
         # here are some other regexs to capture certain patters, but it might be more efficient
         # to run these on the whole text final (via grep from command line)
@@ -238,7 +259,10 @@ class JournalCleaningWorker(object):
 
         # split hyphens and slashes where appropriate
         if split_dash:
-            journal.body = self.split_dash1.sub(r"\1_\3", journal.body)
+            journal.body = self.weekend.sub("weekend ", journal.body)
+            journal.body = self.xray.sub("x_ray ", journal.body)
+            journal.body = self.email.sub("email ", journal.body)
+            journal.body = self.split_dash1.sub(r"\1 \3", journal.body)
             journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
             journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
 
@@ -256,6 +280,14 @@ class JournalCleaningWorker(object):
         # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
         if expand_contractions:
             journal.body = self.iam.sub(" am", journal.body)
+            journal.body = self.im.sub("i", journal.body)
+            journal.body = self.ill.sub("i", journal.body)
+            journal.body = self.youll.sub("you", journal.body)
+            journal.body = self.ive.sub("i", journal.body)
+            journal.body = self.hes.sub("he", journal.body)
+            journal.body = self.shes.sub("she", journal.body)
+            journal.body = self.weve.sub("we", journal.body)
+            journal.body = self.youve.sub("you", journal.body)
             journal.body = self.willnot.sub("will not", journal.body)
             journal.body = self.cannot.sub("can not", journal.body)
             journal.body = self.itis.sub("it is", journal.body)
@@ -297,7 +329,7 @@ class JournalCleaningWorker(object):
 
         # remove first names
         if rm_names:
-            journal.body = [w for w in journal.body if w.lower() not in self.first.names]
+            journal.body = ["_name_" if w.lower() in self.first.names else w for w in journal.body]
 
         # lemmatize the remaining tokens
         # convert to lowercase, would like to do this earlier, but might get better lemmatizing results
@@ -337,6 +369,10 @@ class JournalCleaningWorker(object):
                     output += '\t'.join(journal.features)
                 else:
                     # for other tasks (like topic modeling) we want the journal body saved
+                    if len(journal.body) == 0:
+                        continue
+
+                    # else save the output to the file
                     output += ' '.join(journal.body)
 
                 fout.write(output + '\n')
