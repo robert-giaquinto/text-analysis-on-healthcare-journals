@@ -6,6 +6,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import preprocessing
+import argparse
 
 def load_topic_features(infile):
     """
@@ -73,10 +74,45 @@ def run_grid_search(X, y, model, param_grid, cv=5, n_jobs=1, verbose=0):
     return grid_search.best_estimator_
 
 
+def classify(x_new, model, threshold):
+    """
+    
+    """
+    probs = model.predict_proba(x_new)
+    pred = []
+    for pr in probs:
+        if pr.max() >= threshold:
+            i = np.argmax(pr)
+            pred.append(model.classes[i])
+        else:
+            pred.append("no_prediction")
+    
+    return pr
+
+
 
 def main():
-    topic_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/topic_features_per_site.csv'
-    keywords_and_hc_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/cond_keywords.txt'
+    parser = argparse.ArgumentParser(description='Main script for classifying health condition.')
+    parser.add_argument('--topic_file', type=str, help='Full path to the topic features csv file.',
+                        default='/home/srivbane/shared/caringbridge/data/classify_health_condition/topic_features_per_site.csv')
+    parser.add_argument('--keywords_and_hc_file', type=str, help='Full path to the file with health conditions and keywords.',
+                        default='/home/srivbane/shared/caringbridge/data/classify_health_condition/cond_keywords.txt')
+    parser.add_argument('--cv', type=int, help='Number of cross-validation folders to use.', default=5)
+    parser.add_argument('--n_jobs', type=int, help='Number of cores to use', default=1)
+    parser.add_argument('--verbose', type=int, help='Level of verbosity parameter to pass to sklearn', default=1)
+    args = parser.parse_args()
+    print('main.py: Classify Health Condition')
+    print(args)
+
+    if args.topic_file is None:
+        topic_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/topic_features_per_site.csv'
+    else:
+        topic_file = args.topic_file
+    if args.keywords_and_hc_file is None:
+        keywords_and_hc_file = '/home/srivbane/shared/caringbridge/data/classify_health_condition/cond_keywords.txt'
+    else:
+        keywords_and_hc_file = args.keywords_and_hc_file
+        
     custom_conditions = ['custom', 'Other']
 
     # set a random seed so that results are reproducible
@@ -100,9 +136,18 @@ def main():
 
 
     # variables for training:
-    cv = 5
-    n_jobs = 2 # make this 16 if submitting via qsub
-    verbose = 1
+    if args.cv is None:
+        cv = 5
+    else:
+        cv = args.cv
+    if args.n_jobs is None:
+        n_jobs = 2
+    else:
+        n_jobs = args.n_jobs
+    if args.verbose is None:
+        verbose = 1
+    else:
+        verbose = args.verbose
 
     
     # train logisitic regression model
