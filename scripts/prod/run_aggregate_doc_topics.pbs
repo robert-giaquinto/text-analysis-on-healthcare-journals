@@ -10,4 +10,4 @@ module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts/logs
 DD=/home/srivbane/shared/caringbridge/data/topic_model_no_names/
-python -m src.topic_model.aggregate_doc_topics --infile ${DD}train_document_topic_probs.txt --outfile ${DD}topic_features_per_site.csv
+python -m src.topic_model.aggregate_doc_topics --infile ${DD}train_document_topic_probs.txt --outfile ${DD}max_topic_features_per_site.csv --agg max

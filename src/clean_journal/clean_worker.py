@@ -104,7 +104,7 @@ class JournalCleaningWorker(object):
         self.itis = re.compile(r"it's", re.IGNORECASE)
         self.letus = re.compile(r"let's", re.IGNORECASE)
         self.heis = re.compile(r"he's", re.IGNORECASE)
-        self.howis = re.compile(r"how's" re.IGNORECASE)
+        self.howis = re.compile(r"how's", re.IGNORECASE)
         self.thatis = re.compile(r"that's", re.IGNORECASE)
         self.thereis = re.compile(r"there's", re.IGNORECASE)
         self.whatis = re.compile(r"what's", re.IGNORECASE)

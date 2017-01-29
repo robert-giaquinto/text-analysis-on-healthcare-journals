@@ -4,7 +4,7 @@ import subprocess
 import numpy as np
 import argparse
 
-def avg_by_site(infile, outfile):
+def agg_by_site(infile, outfile, agg="max"):
     """
     Simplest approach, just average the topic vectors for each document in a site
     
@@ -21,7 +21,7 @@ def avg_by_site(infile, outfile):
         cmd = """/bin/bash -c "sort -n %s -t $',' -k1,1 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (infile, infile, "80%")
         subprocess.call(cmd, shell=True)
 
-    print("Averaging doc topics per site...")
+    print(agg + "ing doc topics per site...")
     current_site = ''
     current_topics = []
     with open(infile, 'r') as fin, open(outfile, 'wb') as fout:
@@ -48,12 +48,15 @@ def avg_by_site(infile, outfile):
                 # 1. aggregate current collection of results
                 #    numpy should be faster as long as num_topics > 8-ish
                 if len(current_topics) > 1:
-                    topic_avg = np.array(current_topics).mean(axis=0)
+                    if agg == "mean":
+                        topic_agg = np.array(current_topics).mean(axis=0)
+                    else:
+                        topic_agg = np.array(current_topics).max(axis=0)
                 else:
-                    topic_avg = current_topics[0]
+                    topic_agg = current_topics[0]
                 
                 # 2. save current results
-                fout.write(keys[0] + ',' + ','.join([str(t) for t in topic_avg]) + '\n')
+                fout.write(keys[0] + ',' + ','.join([str(t) for t in topic_agg]) + '\n')
                 
                 # 3. update variables
                 current_topics = [topics]
@@ -74,6 +77,7 @@ def main():
     parser = argparse.ArgumentParser(description='Aggregate document topic probability matrix to give topic vectors for each site.')
     parser.add_argument('-i', '--infile', type=str, help='File containing document topic probabilities.')
     parser.add_argument('-o', '--outfile', type=str, help='Where to write the output of a topic probabilities for each site.')
+    parser.add_argument('-a', '--agg', type=str, help='Type of aggregation to perform. Example: mean, max.')
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.set_defaults(verbose=False)
     args = parser.parse_args()
@@ -81,7 +85,7 @@ def main():
     print('aggregate_doc_topics.py')
     print(args)
     
-    avg_by_site(args.infile, args.outfile)
+    agg_by_site(args.infile, args.outfile, agg=args.agg)
 
 
 
