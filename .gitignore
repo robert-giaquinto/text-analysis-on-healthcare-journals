@@ -12,3 +12,7 @@ scripts/logs/*
 build/
 dist/
 text_analysis.egg-info/
+scripts/prod/*.e*
+scripts/prod/*.log
+scripts/dev/*.log
+scripts/dev/*.e*

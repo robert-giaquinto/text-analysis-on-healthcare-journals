@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -l walltime=12:00:00,nodes=1:ppn=24,mem=62gb
+#PBS -l walltime=12:00:00,nodes=1:ppn=3,mem=62gb
 #PBS -q small
 #PBS -o classify_health_condition.log
 #PBS -m abe
@@ -12,4 +12,4 @@ cd ~/text-analysis/scripts/logs
 DD=/home/srivbane/shared/caringbridge/data/classify_health_condition/
 TOPICS=topic_features_per_site.csv
 KEYS=cond_keywords.txt
-python -m src.classify_health_condition.main --topic_file ${DD}${TOPICS} --keywords_and_hc_file ${DD}${KEYS} --cv 5 --n_jobs 8 --verbose 1
+python -m src.classify_health_condition.eval_max_and_avg_topic_features --topic_file ${DD}${TOPICS} --keywords_and_hc_file ${DD}${KEYS} --cv 3 --n_jobs 3 --verbose 1

@@ -8,29 +8,31 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn import preprocessing
 import argparse
 
-def load_topic_features(infile):
+def load_topic_features(infile, prefix=""):
     """
     load the topic features dataset and give it appropriate column labels
     """
-    df = pd.read_csv(infile, nrows=100000)
+    df = pd.read_csv(infile)
     num_topics = df.shape[1] - 1
-    col_names = ['site_id'] + ['topic' + str(t) for t in range(num_topics)]
+    col_names = ['site_id'] + [prefix + 'topic' + str(t) for t in range(num_topics)]
     df.columns = col_names
     return df
 
 
-def load_data(topic_file, keywords_and_hc_file):
+def load_data(max_topic_file, avg_topic_file, keywords_and_hc_file):
     """
     load the two data files and merge them
     """
-    topic_df = load_topic_features(topic_file)
+    max_topic_df = load_topic_features(max_topic_file, prefix="max_")
+    avg_topic_df = load_topic_features(avg_topic_file, prefix="avg_")
+    topic_df = pd.merge(max_topic_df, avg_topic_df, on=["site_id"], how="inner", sort=False)
 
-    col_names = ['site_id', 'health_condition',
-                 "cancer", "surgery", "injury", "breast", "stroke", "brain",
+    col_names = ['site_id', 'health_condition']
+    keyword_cols = ["cancer", "surgery", "injury", "breast", "stroke", "brain",
                  "transplantation", "leukemia", "lung", "lymphoma", "heart", "pancreatic",
                  "ovarian", "bone", "kidney", "myeloma", "skin", "bladder", "esophageal", "blank"]
-    hc_df = pd.read_csv(keywords_and_hc_file, sep='\t', header=None, names=col_names)
-    hc_df.drop('blank', axis=1, inplace=True)
+    hc_df = pd.read_csv(keywords_and_hc_file, sep='\t', header=None, names=col_names + keyword_cols)
+    hc_df.drop(keyword_cols, axis=1, inplace=True)
 
     rval = pd.merge(topic_df, hc_df, on=['site_id'], how='inner', sort=False)
     return rval
@@ -97,7 +99,7 @@ def main():
                         default='/home/srivbane/shared/caringbridge/data/classify_health_condition/topic_features_per_site.csv')
     parser.add_argument('--keywords_and_hc_file', type=str, help='Full path to the file with health conditions and keywords.',
                         default='/home/srivbane/shared/caringbridge/data/classify_health_condition/cond_keywords.txt')
-    parser.add_argument('--cv', type=int, help='Number of cross-validation folders to use.', default=5)
+    parser.add_argument('--cv', type=int, help='Number of cross-validation folders to use.', default=3)
     parser.add_argument('--n_jobs', type=int, help='Number of cores to use', default=1)
     parser.add_argument('--verbose', type=int, help='Level of verbosity parameter to pass to sklearn', default=1)
     args = parser.parse_args()
@@ -120,7 +122,7 @@ def main():
     
     # load all the data
     print("loading data")
-    df = load_data(topic_file, keywords_and_hc_file)
+    df = load_data(topic_file.replace("/topic", "/max_topic"), topic_file.replace("/topic", "/avg_topic"), keywords_and_hc_file)
     print("Size of dataset:", df.shape)
 
     # save the custom answers for prediction later
@@ -156,11 +158,11 @@ def main():
     logit_param_grid = {'penalty': ['l2'],
                         'solver': ['lbfgs'],
                         'C': [0.001, 0.01, 0.1, 1, 10, 50, 100, 500]}
-    logit = run_grid_search(X=x_train, y=y_train,
-                            model=LogisticRegression(random_state=random_seed),
-                            param_grid=logit_param_grid,
-                            cv=cv, n_jobs=n_jobs, verbose=verbose)
-    print("Best logistic regression performance on test set:", logit.score(x_test, y_test))
+    #logit = run_grid_search(X=x_train, y=y_train,
+    #                        model=LogisticRegression(random_state=random_seed),
+    #                        param_grid=logit_param_grid,
+    #                        cv=cv, n_jobs=n_jobs, verbose=verbose)
+    #print("Best logistic regression performance on test set:", logit.score(x_test, y_test))
     
 
     # decision tree
@@ -168,19 +170,19 @@ def main():
     dt_param_grid = {"min_samples_split": [2],
                      "max_depth": [None, 2, 5, 10]}
     # do cross validation to determine optimal parameters to the model
-    dt = run_grid_search(X=x_train, y=y_train,
-                         model=DecisionTreeClassifier(random_state=random_seed),
-                         param_grid=dt_param_grid,
-                         cv=cv, n_jobs=n_jobs, verbose=verbose)
+    #dt = run_grid_search(X=x_train, y=y_train,
+    #                     model=DecisionTreeClassifier(random_state=random_seed),
+    #                     param_grid=dt_param_grid,
+    #                     cv=cv, n_jobs=n_jobs, verbose=verbose)
     # train a model on the full training set using the optimal parameters
-    print("Best decision tree performance on test set:", dt.score(x_test, y_test))
+    #print("Best decision tree performance on test set:", dt.score(x_test, y_test))
 
 
     
 
     # train random forest
     print("\nFinding optimal random forest")
-    rf_param_grid = {"max_features": ['sqrt', 'log2', None],
+    rf_param_grid = {"max_features": ['sqrt', 'log2'],
                      "max_depth": [None]}
     # do cross validation to determine optimal parameters to the model
     rf = run_grid_search(X=x_train, y=y_train,
