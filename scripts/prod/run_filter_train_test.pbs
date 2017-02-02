@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -l walltime=00:30:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab
+#PBS -o filter_train_test.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N filter_train_test
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/prod
+R CMD BATCH --no-save --no-restore ~/text-analysis/src/clean_journal/train_test_sites.r /home/srivbane/shared/caringbridge/data/clean_journals/train_test_sites.Rout
+python -m src.clean_journal.filter_train_test

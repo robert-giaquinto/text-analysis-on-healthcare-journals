@@ -76,7 +76,7 @@ class GensimLDA(object):
 
         return docs
 
-    def fit_partial(self, num_topics, perplexity_threshold, evals_per_pass, chunksize, max_passes=3):
+    def fit_partial(self, num_topics, perplexity_threshold, evals_per_pass, chunksize, max_passes):
         """
         Fit a single LDA model given some parameters.
 
@@ -105,23 +105,21 @@ class GensimLDA(object):
                                                      eval_every=None)
 
         if perplexity_threshold == 0.0:
-            # don't stop early, just do 1 pass all in gensim
-            logger.info("Running for just one full pass through data, not stopping to check for perplexity convergence")
+            # don't stop early, just do max_passes pass all in gensim
+            logger.info("Running for " + str(max_passes) +" through data, not stopping to check for perplexity convergence on a test set.")
             model.eval_every = evals_per_pass
+            model.passes = max_passes
             model.update(corpus=self.docs.train_bow)
 
             if self.num_test > 0:
                 perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
-            else:
-                perplexity = self._perplexity_score(model, self.docs.train_bow, self.num_train)
-                
-            convergence['perplexities'].append(perplexity)
-            convergence['docs_seen'].append(self.num_train)
+                convergence['perplexities'].append(perplexity)
+                convergence['docs_seen'].append(self.num_train)
 
             return model, convergence
 
         # ELSE: run for a chunk of data, check for convergence
-        logger.info("Running for at least one pass, checking for perplexity convergence with threshold of " + str(perplexity_threshold))
+        logger.info("Running for [1, " + str(max_passes) + "] passes, checking for perplexity convergence with threshold of " + str(perplexity_threshold))
         converged = False
         prev_perplexity, perplexity = None, None
         docs_seen = 0
@@ -131,16 +129,14 @@ class GensimLDA(object):
             # train on num_train / evals_per pass documents at the time, then evaluate perplexity
             chunk_stream = utils.grouper(self.docs.train_bow, int(ceil(self.num_train / evals_per_pass)), as_numpy=False)
             for i, chunk in enumerate(chunk_stream):
-                model.update(corpus=chunk, chunks_as_numpy=False)
-                docs_seen += len(chunk)
-
-                # measure perplexity after training of the most recent chunk
-                # if a test set is not given, assume this is a small dataset and run perplexity
-                # calculation on full document list again
+                # measure perplexity
                 if self.num_test > 0:
                     perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
                 else:
-                    perplexity = self._perplexity_score(model, self.docs.train_bow, self.num_train)
+                    perplexity = self._perplexity_score(model, chunk, self.num_train)
+
+                model.update(corpus=chunk, chunks_as_numpy=False)
+                docs_seen += len(chunk)
                     
                 logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
                 convergence['perplexities'].append(perplexity)
@@ -156,7 +152,7 @@ class GensimLDA(object):
 
         return model, convergence
 
-    def fit(self, num_topics, chunksizes=None, perplexity_threshold=None, evals_per_pass=4):
+    def fit(self, num_topics, chunksizes=None, perplexity_threshold=0.0, evals_per_pass=None, max_passes=1):
         """
         Find the best LDA model for a range of num_topics and chunksizes
         """
@@ -179,7 +175,8 @@ class GensimLDA(object):
                 model, convergence = self.fit_partial(num_topics=n,
                                                       perplexity_threshold=perplexity_threshold,
                                                       evals_per_pass=evals_per_pass,
-                                                      chunksize=c)
+                                                      chunksize=c,
+                                                      max_passes=max_passes)
                 
                 model.save(os.path.join(self.docs.data_dir, "LDA_docs_" + str(self.num_train) + "_" + str(self.num_test) + "_topics_" + str(n) + "_chucksize_" + str(c) + ".lda"))
                 
@@ -187,11 +184,16 @@ class GensimLDA(object):
                                     'chunksize': c,
                                     'perplexities': convergence['perplexities'],
                                     'docs_seen': convergence['docs_seen']})
-                perplexity = convergence['perplexities'][-1]
-                if perplexity < best_perplexity:
-                    logger.info("New best model found")
+
+
+                if self.num_test > 0:
+                    perplexity = convergence['perplexities'][-1]
+                    if perplexity < best_perplexity:
+                        logger.info("New best model found")
+                        self.model = model
+                        best_perplexity = perplexity
+                else:
                     self.model = model
-                    best_perplexity = perplexity
 
         # set topic terms
         if self.topic_term_method == "weighted":

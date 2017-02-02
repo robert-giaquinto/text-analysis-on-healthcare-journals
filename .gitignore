@@ -5,6 +5,7 @@
 *.py~
 *.sh~
 *.pbs~
+*.r~
 *.log
 scripts/CB_*
 scripts/*.e*
