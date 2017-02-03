@@ -615,7 +615,11 @@ def main():
     
     print("Saving topic terms...")
     lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric=metric)
-    #lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric=metric)
+
+    print("Saving probability of each word to topic...")
+    lda.save_word_topic_probs(os.path.join(args.data_dir, "word_topic_probs.txt"), metric=metric)
+
+    # use extract model artifacts module to save doc topics (much faster)
     #print("Saving document topic probabilities")
     #lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 

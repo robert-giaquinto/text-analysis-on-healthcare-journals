@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -l walltime=12:00:00,nodes=1:ppn=8,mem=22gb
+#PBS -q lab
+#PBS -o lda_over_time_data.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N lda_over_time_data
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+DD=/home/srivbane/shared/caringbridge/data/
+python -m src.topic_model.lda_over_time --train ${DD}clean_journals/clean_journals_no_names_train.txt --test ${DD}clean_journals/clean_journals_no_names_test.txt --train_bins ${DD}clean_journals/train_bin_counts.txt --test_bins ${DD}clean_journals/test_bin_counts.txt --data_dir ${DD}lda_over_time --passes 1 --keep_n 10000 --no_above 0.90 --num_topics 50 --chunksize 1024 --n_workers 8 --log --rebuild --fit_all

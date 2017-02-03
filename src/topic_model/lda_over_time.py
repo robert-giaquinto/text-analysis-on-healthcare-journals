@@ -1,6 +1,3 @@
-
-
-
 from __future__ import division, print_function, absolute_import
 import argparse
 import os
@@ -72,7 +69,9 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
                                     no_above=train_docs.no_above,
                                     rebuild=False,
                                     num_docs=train_size,
-                                    shuffle=False, verbose=True)
+                                    shuffle=False,
+                                    prune_at=train_docs.prune_at,
+                                    verbose=True)
         train_doc_chunk.num_train = train_size
         train_doc_chunk.train_bow = train_chunk
         train_doc_chunk.vocab = train_docs.vocab
@@ -142,30 +141,33 @@ def main():
     # create document objects
     print("Creating training documents object")
     train_docs = Documents(journal_file=args.train,
-                     num_test=0,
-                     data_dir=args.data_dir,
-                     rebuild=args.rebuild,
-                     keep_n=args.keep_n,
-                     no_above=args.no_above,
-                     num_docs=total_train,
-                     shuffle=False,
-                     verbose=args.verbose)
+                           num_test=0,
+                           data_dir=args.data_dir,
+                           rebuild=args.rebuild,
+                           keep_n=args.keep_n,
+                           no_above=args.no_above,
+                           num_docs=total_train,
+                           shuffle=False,
+                           prune_at=8000000,
+                           verbose=args.verbose)
     train_docs.fit()
 
     print("Creating testing documents")
     test_docs = Documents(journal_file=args.test,
-                     num_test=0,
-                     data_dir=args.data_dir,
-                     rebuild=False,
-                     keep_n=args.keep_n,
-                     no_above=args.no_above,
-                     num_docs=total_test,
-                     shuffle=False,
-                     verbose=args.verbose)
+                          num_test=0,
+                          data_dir=args.data_dir,
+                          rebuild=False,
+                          keep_n=args.keep_n,
+                          no_above=args.no_above,
+                          num_docs=total_test,
+                          shuffle=False,
+                          prune_at=8000000,
+                          verbose=args.verbose)
     test_docs.load_vocab()
     test_docs.num_train = total_test
     if args.rebuild:
         test_docs.build_bow()
+
     # in either case load iterator
     test_docs.load_bow()
         
@@ -179,7 +181,10 @@ def main():
         perplexities = fit_local(train_docs, test_docs, train_bins, test_bins, args.num_topics, args.chunksize, args.passes, args.n_workers)
 
     print("Perplexities over time steps:\n", perplexities)
-
+    with open(args.data_dir + "perplexities_all_" + str(args.fit_all) + ".txt", "wb") as f:
+        for p in perplexities:
+            f.write(str(p) + "\n")
+    
     
 if __name__ == "__main__":
     main()
