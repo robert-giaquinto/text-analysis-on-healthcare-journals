@@ -29,12 +29,13 @@ gensim_logger2.addFilter(NoGensimFilter())
 def chunker(iterable, chunksizes):
     it = iter(iterable)
     for chunksize in chunksizes:
-        chunk = [list(itertools.islice(it, chunksize))]
-        if not chunk[0]:
+        chunk = itertools.islice(it, chunksize)
+        if not chunk:
             break
-
-        # wrap the chunk and then pop it, should avoid leaving dangling references (improving memory)
-        yield chunk.pop()
+        def inner(c):
+            yield (doc for doc in c)
+            
+        yield inner(chunk)
 
 
 def fit_all(train_docs, test_docs, train_bins, test_bins, num_topics, chunksize, passes, n_workers):
@@ -45,8 +46,8 @@ def fit_all(train_docs, test_docs, train_bins, test_bins, num_topics, chunksize,
     # test phase:
     test_stream = chunker(test_docs.train_bow, test_bins)
     perplexities = []
-    for test_chunk in test_stream:
-        perplexity = m._perplexity_score(m.model, test_chunk, total_docs=train_docs.num_train)
+    for test_size, test_chunk in zip(test_bins, test_stream):
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b), total_docs=train_docs.num_train, num_sample=test_size)
         perplexities.append(perplexity)
 
     return perplexities
@@ -60,7 +61,7 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
     train_stream = chunker(train_docs.train_bow, train_bins)
     test_stream = chunker(test_docs.train_bow, test_bins)
     perplexities = []
-    for train_size, train_chunk, test_chunk in zip(train_bins, train_stream, test_stream):
+    for train_size, test_size, train_chunk, test_chunk in zip(train_bins, test_bins, train_stream, test_stream):
         # initialize the mini batch of Documents
         train_doc_chunk = Documents(journal_file=train_docs.journal_file,
                                     num_test=0,
@@ -79,7 +80,7 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
         m = GensimLDA(docs=train_doc_chunk, n_workers=n_workers, verbose=True)
         perf = m.fit(num_topics=num_topics, chunksizes=chunksize, perplexity_threshold=0.0, evals_per_pass=None, max_passes=passes)
         # test
-        perplexity = m._perplexity_score(m.model, test_chunk, total_docs=train_size)
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b), total_docs=train_size, num_sample=test_size)
         perplexities.append(perplexity)
         
     return perplexities
@@ -124,9 +125,11 @@ def main():
 
     parser.add_argument('--log', dest="verbose", action="store_true", help='Add this flag to have progress printed to log.')
     parser.add_argument('--rebuild', dest="rebuild", action="store_true", help='Add this flag to rebuild the bag-of-words and vocabulary, even if copies of the files already exists.')
+    parser.add_argument('--data', dest="data", action="store_true", help='Only build the data needed for these analyses and then stop.')
     parser.set_defaults(verbose=False)
     parser.set_defaults(rebuild=False)
     parser.set_defaults(fit_all=False)
+    parser.set_defaults(data=False)
     args = parser.parse_args()
 
     print('lda_over_time.py')
@@ -134,9 +137,7 @@ def main():
 
     # read in counts of documents at each time step
     total_train, train_bins = read_bins(args.train_bins)
-    print(train_bins)
     total_test, test_bins = read_bins(args.test_bins)
-    print(test_bins)
     
     # create document objects
     print("Creating training documents object")
@@ -165,12 +166,14 @@ def main():
                           verbose=args.verbose)
     test_docs.load_vocab()
     test_docs.num_train = total_test
-    if args.rebuild:
+    if args.rebuild or args.data:
         test_docs.build_bow()
 
     # in either case load iterator
     test_docs.load_bow()
-        
+
+    if args.data:
+        return
 
     # call the training method
     if args.fit_all:
@@ -181,7 +184,7 @@ def main():
         perplexities = fit_local(train_docs, test_docs, train_bins, test_bins, args.num_topics, args.chunksize, args.passes, args.n_workers)
 
     print("Perplexities over time steps:\n", perplexities)
-    with open(args.data_dir + "perplexities_all_" + str(args.fit_all) + ".txt", "wb") as f:
+    with open(os.path.join(args.data_dir, "perplexities_all_" + str(args.fit_all) + ".txt"), "wb") as f:
         for p in perplexities:
             f.write(str(p) + "\n")
     

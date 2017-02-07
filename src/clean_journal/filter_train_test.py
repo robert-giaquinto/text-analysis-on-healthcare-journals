@@ -13,13 +13,13 @@ def dif_days(x, y):
 
 
 def main():
-    data_dir = "/home/srivbane/shared/caringbridge/data/clean_journals/"
+    data_dir = "/home/srivbane/shared/caringbridge/data/dev/clean_journals/"
     #journal_file = "test.txt"
     journal_file = "clean_journals_no_names.txt"
     train_file = "train_sites.txt"
-    train_out = "clean_journals_no_names_train.txt"
+    train_out = "train_5_posts_known_hc.txt"
     test_file = "test_sites.txt"
-    test_out = "clean_journals_no_names_test.txt"
+    test_out = "test_5_posts_known_hc.txt"
 
     # Make sure that the journal file is sorted
     check_sorted_cmd = """/bin/bash -c "sort -nc %s -t$'\t' -k1,4 -S %s" """ % (data_dir + journal_file, "80%")

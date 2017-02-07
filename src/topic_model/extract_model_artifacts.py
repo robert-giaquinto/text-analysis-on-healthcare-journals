@@ -48,6 +48,11 @@ def main():
                      num_docs=args.num_docs,
                      verbose=args.verbose)
     
+    # note: if num_test = 0, then the file for the documents keys will be wrong...
+    if args.num_test == 0:
+        docs.train_shard_file = args.journal_file
+        docs.test_shard_file = None
+    
     model._init_docs(docs)
 
     if args.n_workers == 1:

@@ -1,0 +1,16 @@
+#!/bin/bash -l
+#PBS -l walltime=23:55:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab
+#PBS -o dtm.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N dtm
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+DD=/home/srivbane/shared/caringbridge/data/dtm/
+train=train_5_posts_known_hc.txt
+holdout=test_5_posts_known_hc.txt
+dtm_home=/home/srivbane/smit7982/dtm/dtm/main
+python -m src.topic_model.dtm --train_file ${DD}${train} --holdout_file ${DD}${holdout} --data_dir ${DD} --keep_n 1000 --num_train 5931553 --num_test 495139 --num_topics 50 --dtm_binary ${dtm_home}
+

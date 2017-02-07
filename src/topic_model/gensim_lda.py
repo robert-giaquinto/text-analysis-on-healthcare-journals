@@ -49,7 +49,7 @@ class GensimLDA(object):
             logging.basicConfig(format='%(name)s : %(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
         self.n_workers = n_workers
-        self.docs = self._init_docs(docs)
+        self._init_docs(docs)
 
         self.num_train = docs.num_train
         self.num_test = docs.num_test
@@ -57,7 +57,8 @@ class GensimLDA(object):
         self.topic_terms = None
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
         self.num_topics = None
-
+        self.offset = int(round(self.num_train * 0.2))
+        
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
 
@@ -73,8 +74,9 @@ class GensimLDA(object):
 
         if docs.train_keys is None or docs.test_keys is None:
             docs.load_keys()
+        # save initialized docs in this object
+        self.docs = docs
 
-        return docs
 
     def fit_partial(self, num_topics, perplexity_threshold, evals_per_pass, chunksize, max_passes):
         """
@@ -96,13 +98,15 @@ class GensimLDA(object):
             model = models.ldamodel.LdaModel(id2word=self.docs.vocab,
                                              num_topics=num_topics,
                                              chunksize=chunksize,
-                                             eval_every=None)
+                                             eval_every=None,
+                                             offset=self.offset)
         else:
             model = models.ldamulticore.LdaMulticore(id2word=self.docs.vocab,
                                                      num_topics=num_topics,
                                                      workers=self.n_workers,
                                                      chunksize=chunksize,
-                                                     eval_every=None)
+                                                     eval_every=None,
+                                                     offset=self.offset)
 
         if perplexity_threshold == 0.0:
             # don't stop early, just do max_passes pass all in gensim
@@ -205,7 +209,7 @@ class GensimLDA(object):
 
         return performance
 
-    def _perplexity_score(self, model, X, total_docs=None):
+    def _perplexity_score(self, model, X, total_docs=None, num_sample=None):
         """
         Calculate perplexity on a set of documents X
         """
@@ -213,7 +217,10 @@ class GensimLDA(object):
             total_docs = sum(1 for _ in X)
 
         corpus_words = sum(ct for doc in X for _, ct in doc)
-        subsample_ratio = 1.0 * total_docs / len(X)
+        if num_sample is None:
+            num_sample = len(X)
+            
+        subsample_ratio = 1.0 * total_docs / num_sample
         perword_bound = model.bound(X, subsample_ratio=subsample_ratio) / (subsample_ratio * corpus_words)
         perplexity = np.exp2(-perword_bound)
         return perplexity

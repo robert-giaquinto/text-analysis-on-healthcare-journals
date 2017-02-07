@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -l walltime=00:10:00,nodes=1:ppn=1,mem=12gb
+#PBS -l walltime=00:10:00,nodes=1:ppn=1,mem=2gb
 #PBS -q lab
 #PBS -o lda_over_time.log
 #PBS -m abe
@@ -10,4 +10,4 @@ module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts/logs
 DD=/home/srivbane/shared/caringbridge/data/dev/
-python -m src.topic_model.lda_over_time --train ${DD}clean_journals/clean_journals_no_names_train.txt --test ${DD}clean_journals/clean_journals_no_names_test.txt --train_bins ${DD}clean_journals/train_bin_counts.txt --test_bins ${DD}clean_journals/test_bin_counts.txt --data_dir ${DD}lda_over_time --passes 1 --keep_n 100 --no_above 0.99 --num_topics 5 --chunksize 1 --n_workers 1 --log --rebuild --fit_all
+python -m src.topic_model.lda_over_time --train ${DD}clean_journals/clean_journals_no_names_train.txt --test ${DD}clean_journals/clean_journals_no_names_test.txt --train_bins ${DD}clean_journals/train_bin_counts.txt --test_bins ${DD}clean_journals/test_bin_counts.txt --data_dir ${DD}lda_over_time --passes 1 --keep_n 250 --no_above 0.99 --num_topics 5 --chunksize 1 --n_workers 1 --log
