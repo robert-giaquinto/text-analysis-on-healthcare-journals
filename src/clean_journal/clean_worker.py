@@ -90,44 +90,44 @@ class JournalCleaningWorker(object):
         self.punct = re.compile(r"[^a-zA-Z_ ]") # keeping _'s in so we can use them as a special identifier
 
         # search for contractions
-        self.im = re.compile(r"im", re.IGNORECASE)
-        self.iam = re.compile(r"'m", re.IGNORECASE)
-        self.ill = re.compile(r"ill", re.IGNORECASE)
-        self.youll = re.compile(r"youll", re.IGNORECASE)
-        self.ive = re.compile(r"ive", re.IGNORECASE)
-        self.hes = re.compile(r"hes", re.IGNORECASE)
-        self.shes = re.compile(r"shes", re.IGNORECASE)
-        self.weve = re.compile(r"weve", re.IGNORECASE)
-        self.youve = re.compile(r"youve", re.IGNORECASE)
-        self.willnot = re.compile(r"won't", re.IGNORECASE)
-        self.cannot = re.compile(r"can't", re.IGNORECASE)
-        self.itis = re.compile(r"it's", re.IGNORECASE)
-        self.letus = re.compile(r"let's", re.IGNORECASE)
-        self.heis = re.compile(r"he's", re.IGNORECASE)
-        self.howis = re.compile(r"how's", re.IGNORECASE)
-        self.thatis = re.compile(r"that's", re.IGNORECASE)
-        self.thereis = re.compile(r"there's", re.IGNORECASE)
-        self.whatis = re.compile(r"what's", re.IGNORECASE)
-        self.whereis = re.compile(r"where's", re.IGNORECASE)
-        self.whenis = re.compile(r"when's", re.IGNORECASE)
-        self.whois = re.compile(r"who's", re.IGNORECASE)
-        self.whyis = re.compile(r"why's", re.IGNORECASE)
+        self.im = re.compile(r"\bim\b", re.IGNORECASE)
+        self.iam = re.compile(r"\bi'm\b", re.IGNORECASE)
+        self.youll = re.compile(r"\byoull\b", re.IGNORECASE)
+        self.ive = re.compile(r"\bive\b", re.IGNORECASE)
+        self.hes = re.compile(r"\bhes\b", re.IGNORECASE)
+        self.shes = re.compile(r"\bshes\b", re.IGNORECASE)
+        self.weve = re.compile(r"\bweve\b", re.IGNORECASE)
+        self.youve = re.compile(r"\byouve\b", re.IGNORECASE)
+        self.willnot = re.compile(r"\bwon't\b", re.IGNORECASE)
+        self.cannot = re.compile(r"\bcan't\b", re.IGNORECASE)
+        self.itis = re.compile(r"\bit's\b", re.IGNORECASE)
+        self.letus = re.compile(r"\blet's\b", re.IGNORECASE)
+        self.heis = re.compile(r"\bhe's\b", re.IGNORECASE)
+        self.sheis = re.compile(r"\bshe's\b", re.IGNORECASE)
+        self.howis = re.compile(r"\bhow's\b", re.IGNORECASE)
+        self.thatis = re.compile(r"\bthat's\b", re.IGNORECASE)
+        self.thereis = re.compile(r"\bthere's\b", re.IGNORECASE)
+        self.whatis = re.compile(r"\bwhat's\b", re.IGNORECASE)
+        self.whereis = re.compile(r"\bwhere's\b", re.IGNORECASE)
+        self.whenis = re.compile(r"\bbwhen's\b", re.IGNORECASE)
+        self.whois = re.compile(r"\bwho's\b", re.IGNORECASE)
+        self.whyis = re.compile(r"\bwhy's\b", re.IGNORECASE)
         self.youall = re.compile(r"y'all|ya'll", re.IGNORECASE)
-        self.youare = re.compile(r"you're", re.IGNORECASE)
-        self.would = re.compile(r"'d", re.IGNORECASE)
-        self.has = re.compile(r"'s", re.IGNORECASE)
-        self.nt = re.compile(r"n't", re.IGNORECASE)
-        self.will = re.compile(r"'ll", re.IGNORECASE)
-        self.have = re.compile(r"'ve", re.IGNORECASE)
-        self.s_apostrophe = re.compile(r"s' ", re.IGNORECASE)
+        self.youare = re.compile(r"\byou're\b", re.IGNORECASE)
+        self.would = re.compile(r"'d\b", re.IGNORECASE)
+        self.has = re.compile(r"'s\b", re.IGNORECASE)
+        self.nt = re.compile(r"n't\b", re.IGNORECASE)
+        self.will = re.compile(r"'ll\b", re.IGNORECASE)
+        self.have = re.compile(r"'ve\b", re.IGNORECASE)
+        self.s_apostrophe = re.compile(r"s'\b", re.IGNORECASE)
 
         # here are some other regexs to capture certain patters, but it might be more efficient
         # to run these on the whole text final (via grep from command line)
         self.html = re.compile(r"<[^>]*>")
         self.years = re.compile(r"\b(18|19|20)[0-9]{2}\b")
         self.punct = re.compile(r"[^a-zA-Z_\s]")
-        self.dollars = re.compile(r"\$[1-9][0-9,\. ]+")
-        self.percent = re.compile(r"[1-9][0-9,\. ]+\%")
+        self.dollars = re.compile(r"\$[1-9][0-9,\.]*")
+        self.percent = re.compile(r"[1-9][0-9\.]*\%")
         self.times = re.compile(r"(2[0-3]|[01]?[0-9]):([0-5]?[0-9])")
         # email addresses? dates? numbers?
 
@@ -189,6 +189,8 @@ class JournalCleaningWorker(object):
             raise ValueError("This method of cleaning the text data has not yet been implemented")
         elif self.clean_method == "survival":
             return self.clean_journal_for_survival_analysis(journal)
+        elif self.clean_method == "word2vec":
+            return self.clean_journal_for_word2vec(journal)
         elif self.clean_method == "none":
             return journal
         else:
@@ -279,20 +281,20 @@ class JournalCleaningWorker(object):
         # expand contractions
         # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
         if expand_contractions:
-            journal.body = self.iam.sub(" am", journal.body)
-            journal.body = self.im.sub("i", journal.body)
-            journal.body = self.ill.sub("i", journal.body)
-            journal.body = self.youll.sub("you", journal.body)
-            journal.body = self.ive.sub("i", journal.body)
-            journal.body = self.hes.sub("he", journal.body)
-            journal.body = self.shes.sub("she", journal.body)
-            journal.body = self.weve.sub("we", journal.body)
-            journal.body = self.youve.sub("you", journal.body)
+            journal.body = self.iam.sub("i am", journal.body)
+            journal.body = self.im.sub("i am", journal.body)
+            journal.body = self.youll.sub("you will", journal.body)
+            journal.body = self.ive.sub("i have", journal.body)
+            journal.body = self.hes.sub("he is", journal.body)
+            journal.body = self.shes.sub("she is", journal.body)
+            journal.body = self.weve.sub("we have", journal.body)
+            journal.body = self.youve.sub("you have", journal.body)
             journal.body = self.willnot.sub("will not", journal.body)
             journal.body = self.cannot.sub("can not", journal.body)
             journal.body = self.itis.sub("it is", journal.body)
             journal.body = self.letus.sub("let us", journal.body)
             journal.body = self.heis.sub("he is", journal.body)
+            journal.body = self.sheis.sub("she is", journal.body)
             journal.body = self.howis.sub("how is", journal.body)
             journal.body = self.thatis.sub("that is", journal.body)
             journal.body = self.thereis.sub("there is", journal.body)
@@ -342,6 +344,93 @@ class JournalCleaningWorker(object):
 
         return journal
 
+    def clean_journal_for_word2vec(self, journal):
+        """
+        Helper function that implements how to clean text of a journal
+        for work text that will be used in word2vec
+
+        Args:
+            journal: a single journal object to be modified
+
+        Returns: the journal object with the body variable cleaned and tokenized
+                 so that the text is represented as a list of words
+
+        """
+        # Convert everything to ascii
+        journal.body = unicodedata.normalize('NFKD', journal.body.decode('utf-8')).encode('ascii', 'ignore')
+
+        # remove html
+        journal.body = self.html.sub(" ", journal.body)
+
+        # remove extra white space (i.e. "\n\r\t\f\v ")
+        journal.body = re.sub(r"\s+", " ", journal.body)
+
+        # split hyphens and slashes where appropriate
+        journal.body = self.weekend.sub("weekend ", journal.body)
+        journal.body = self.xray.sub("x_ray ", journal.body)
+        journal.body = self.email.sub("email ", journal.body)
+        journal.body = self.split_dash1.sub(r"\1 \3", journal.body)
+        journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
+        journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
+
+        # homogenize special patterns
+        journal.body = self.years.sub(" _year_ ", journal.body)
+        journal.body = self.dollars.sub(" _dollars_ ", journal.body)
+        journal.body = self.percent.sub(" _percent_ ", journal.body)
+        journal.body = self.times.sub(" _time_ ", journal.body)
+
+        # expand contractions
+        # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
+        journal.body = self.iam.sub("i am", journal.body)
+        journal.body = self.im.sub("i am", journal.body)
+        journal.body = self.youll.sub("you will", journal.body)
+        journal.body = self.ive.sub("i have", journal.body)
+        journal.body = self.hes.sub("he is", journal.body)
+        journal.body = self.shes.sub("she is", journal.body)
+        journal.body = self.weve.sub("we have", journal.body)
+        journal.body = self.youve.sub("you have", journal.body)
+        journal.body = self.willnot.sub("will not", journal.body)
+        journal.body = self.cannot.sub("can not", journal.body)
+        journal.body = self.itis.sub("it is", journal.body)
+        journal.body = self.letus.sub("let us", journal.body)
+        journal.body = self.heis.sub("he is", journal.body)
+        journal.body = self.sheis.sub("she is", journal.body)
+        journal.body = self.howis.sub("how is", journal.body)
+        journal.body = self.thatis.sub("that is", journal.body)
+        journal.body = self.thereis.sub("there is", journal.body)
+        journal.body = self.whatis.sub("what is", journal.body)
+        journal.body = self.whereis.sub("where is", journal.body)
+        journal.body = self.whenis.sub("when is", journal.body)
+        journal.body = self.whois.sub("who is", journal.body)
+        journal.body = self.whyis.sub("why is", journal.body)
+        journal.body = self.youall.sub("you all", journal.body)
+        journal.body = self.youare.sub("you are", journal.body)
+        journal.body = self.would.sub(" would", journal.body)
+        journal.body = self.will.sub(" will", journal.body)
+        journal.body = self.s_apostrophe.sub("s has ", journal.body)
+        journal.body = self.has.sub(" has", journal.body)
+        journal.body = self.nt.sub(" not", journal.body)
+        journal.body = self.have.sub(" have", journal.body)
+        
+        # remove special characters like &amp &quote
+        journal.body = self.special_chars.sub(" ", journal.body)
+
+        # remove remaining punctuation and numbers (except underscores)
+        journal.body = self.punct.sub(" ", journal.body)
+
+        # tokenize
+        journal.body = journal.body.split()
+        journal.tokenized = True # setting this flag helps printing journal objects
+
+        # remove stopwords
+        journal.body = [w for w in journal.body if w.lower() not in self.stopword_set]
+
+        # remove first names and replace them with _name_
+        journal.body = ["_name_" if w.lower() in self.first.names else w for w in journal.body]
+
+        return journal
+
+    
     def clean_and_save(self):
         """
         Run the cleaning method on all journals in input_file.

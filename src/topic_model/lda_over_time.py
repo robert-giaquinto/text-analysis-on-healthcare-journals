@@ -3,6 +3,7 @@ import argparse
 import os
 import logging
 import itertools
+import numpy as np
 
 from src.topic_model.documents import Documents
 from src.topic_model.gensim_lda import GensimLDA
@@ -45,12 +46,16 @@ def fit_all(train_docs, test_docs, train_bins, test_bins, num_topics, chunksize,
 
     # test phase:
     test_stream = chunker(test_docs.train_bow, test_bins)
-    perplexities = []
+    rval = []
     for test_size, test_chunk in zip(test_bins, test_stream):
-        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b), total_docs=train_docs.num_train, num_sample=test_size)
-        perplexities.append(perplexity)
+        # set total_docs and num_sample to 1 to not use subsampling (for comparison to fit_local)
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b),
+                                         total_docs=1,
+                                         num_sample=1)
+        per_word_bound = -1.0 * np.log2(perplexity)
+        rval.append(per_word_bound)
 
-    return perplexities
+    return rval
 
 
 
@@ -60,8 +65,9 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
     test_docs.load_bow()
     train_stream = chunker(train_docs.train_bow, train_bins)
     test_stream = chunker(test_docs.train_bow, test_bins)
-    perplexities = []
-    for train_size, test_size, train_chunk, test_chunk in zip(train_bins, test_bins, train_stream, test_stream):
+    rval = []
+    for i, (train_size, test_size, train_chunk, test_chunk) in enumerate(zip(train_bins, test_bins, train_stream, test_stream)):
+        logger.info("LDA Local time step: " + str(i))
         # initialize the mini batch of Documents
         train_doc_chunk = Documents(journal_file=train_docs.journal_file,
                                     num_test=0,
@@ -76,14 +82,25 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
         train_doc_chunk.num_train = train_size
         train_doc_chunk.train_bow = train_chunk
         train_doc_chunk.vocab = train_docs.vocab
+
         # train
         m = GensimLDA(docs=train_doc_chunk, n_workers=n_workers, verbose=True)
-        perf = m.fit(num_topics=num_topics, chunksizes=chunksize, perplexity_threshold=0.0, evals_per_pass=None, max_passes=passes)
+        perf = m.fit(num_topics=num_topics,
+                     chunksizes=chunksize,
+                     perplexity_threshold=0.0,
+                     evals_per_pass=None,
+                     max_passes=passes,
+                     save_model="t" + str(i) + "_lda_local.lda")
+
         # test
-        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b), total_docs=train_size, num_sample=test_size)
-        perplexities.append(perplexity)
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b),
+                                         total_docs=1,
+                                         num_sample=1)
+        per_word_bound = -1.0 * np.log2(perplexity)
+        logger.info("Per word bound: " + str(per_word_bound))
+        rval.append(per_word_bound)
         
-    return perplexities
+    return rval
 
 
 

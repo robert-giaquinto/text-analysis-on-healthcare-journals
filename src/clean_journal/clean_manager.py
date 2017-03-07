@@ -66,7 +66,7 @@ class JournalCleaningManager(object):
         This recruits n_workers to work on the journal data
         """
         # get the list of shard files in the input_dir
-        input_files = [os.path.join(self.input_dir, fname) for fname in os.listdir(self.input_dir) if re.match("parsed\_journa\l_[0-9]+\_of\_[0-9]+\.txt", fname) is not None]
+        input_files = [os.path.join(self.input_dir, fname) for fname in os.listdir(self.input_dir) if re.match("parsed\_journal\_[0-9]+\_of\_[0-9]+\.txt", fname) is not None]
 
         # clean an write all the journal shards to files
         cleaned_shards = self.assign_tasks(input_files)

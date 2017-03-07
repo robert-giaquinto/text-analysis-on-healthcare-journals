@@ -156,7 +156,7 @@ class GensimLDA(object):
 
         return model, convergence
 
-    def fit(self, num_topics, chunksizes=None, perplexity_threshold=0.0, evals_per_pass=None, max_passes=1):
+    def fit(self, num_topics, chunksizes=None, perplexity_threshold=0.0, evals_per_pass=None, max_passes=1, save_model=True):
         """
         Find the best LDA model for a range of num_topics and chunksizes
         """
@@ -181,8 +181,11 @@ class GensimLDA(object):
                                                       evals_per_pass=evals_per_pass,
                                                       chunksize=c,
                                                       max_passes=max_passes)
-                
-                model.save(os.path.join(self.docs.data_dir, "LDA_docs_" + str(self.num_train) + "_" + str(self.num_test) + "_topics_" + str(n) + "_chucksize_" + str(c) + ".lda"))
+                if save_model:
+                    if type(save_model) == str:
+                        model.save(os.path.join(self.docs.data_dir, save_model))
+                    else:
+                        model.save(os.path.join(self.docs.data_dir, "LDA_docs_" + str(self.num_train) + "_" + str(self.num_test) + "_topics_" + str(n) + "_chucksize_" + str(c) + ".lda"))
                 
                 performance.append({'num_topics': n,
                                     'chunksize': c,

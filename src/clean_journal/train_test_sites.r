@@ -12,6 +12,7 @@ DF <- read_tsv("/home/srivbane/shared/caringbridge/data/clean_journals/clean_jou
 #DF <- DF[DF$datetime > 0 & DF$datetime < 1.5e+12,]
 #DF <- DF[DF$site_id != 839318,]
 print(nrow(DF))
+
 DF <- filter(DF, datetime > 0.86e+12, datetime < 1.5e+12, site_id != 839318)
 print(nrow(DF))
 
@@ -27,12 +28,24 @@ print(nrow(DF))
 DF <- DF %>% group_by(site_id, user_id, journal_id, datetime) %>% filter(row_number() == 1)
 
 # determine which authors have many N or more journal posts
-cutoff <- 5
+# JUST GRAB TOP 10000 SITES WITH MOST POSTS
 sites <- DF %>% group_by(site_id) %>% summarise(n_posts = n(), min_date = min(datetime), max_date = max(datetime))
-freq_sites <- filter(sites, n_posts >= cutoff)
+#cutoff <- 5
+#freq_sites <- filter(sites, n_posts >= cutoff)
+freq_sites <- arrange(sites, desc(n_posts))
+freq_sites <- freq_sites[1:10000,]
+freq_sites$first_date = as.POSIXct(freq_sites$min_date/1000, tz="GMT", origin="1970-01-01")
+freq_sites$last_date = as.POSIXct(freq_sites$max_date/1000, tz="GMT", origin="1970-01-01")
+freq_sites$days_active = as.numeric(difftime(freq_sites$last_date, freq_sites$first_date, units="days"))
+freq_sites$days_per_post = freq_sites$days_active / freq_sites$n_posts
+print(summary(freq_sites))
+freq_sites$first_date <- NULL
+freq_sites$last_date <- NULL
+freq_sites$days_active <- NULL
+freq_sites$days_per_post <- NULL
 
 # split these site ids into training and test
-num_test <- 10000
+num_test <- 2000
 in_train <- sample(freq_sites$site_id, size=nrow(freq_sites) - num_test)
 
 train_sites <- freq_sites %>% filter(site_id %in% in_train) %>% select(site_id, min_date) %>% arrange(site_id)
@@ -45,30 +58,41 @@ output <- as.data.frame(test_sites)
 output$min_date <- format(output$min_date, scientific=FALSE)
 write_tsv(output, "/home/srivbane/shared/caringbridge/data/clean_journals/test_sites.txt", col_names=FALSE)
 
-
 # transform site dates into relative dates
 train_sites$min_date = as.POSIXct(train_sites$min_date/1000, tz="GMT", origin="1970-01-01")
 train <- inner_join(DF, train_sites, by="site_id")
 train$datetime <- as.POSIXct(train$datetime/1000, tz="GMT", origin="1970-01-01")
 train$relative_date = as.numeric(difftime(train$datetime, train$min_date, units="days"))
+print(summary(train))
 
 test_sites$min_date = as.POSIXct(test_sites$min_date/1000, tz="GMT", origin="1970-01-01")
 test <- inner_join(DF, test_sites, by="site_id")
 test$datetime <- as.POSIXct(test$datetime/1000, tz="GMT", origin="1970-01-01")
 test$relative_date = as.numeric(difftime(test$datetime, test$min_date, units="days"))
+print(summary(test))
 
 
 # determine how many of each date bucket there should be
-n_bins = 25
-bins = quantile(train$relative_date, probs=seq(0,1,length.out=n_bins))
+n_bins = 50
+bins = quantile(train$relative_date, probs=seq(0, 1, length.out=n_bins+1))
+
 train_bins = cut(train$relative_date, bins, include.lowest=TRUE, right=FALSE)
 train_bin_counts = rbind(data.frame(train_bins="all", Freq=nrow(train)), as.data.frame(table(train_bins)))
 write_tsv(train_bin_counts, "/home/srivbane/shared/caringbridge/data/clean_journals/train_bin_counts.txt", col_names=FALSE)
+train_seq = rbind(data.frame(Freq=nrow(train_bin_counts)), as.data.frame(table(train_bins))[,2])
+write_tsv(train_seq, "/home/srivbane/shared/caringbridge/data/clean_journals/train-seq.dat", col_names=FALSE)
+
 # use same bins for test set
 test_bins = cut(test$relative_date, bins, include.lowest=TRUE, right=FALSE)
 test_bin_counts = rbind(data.frame(test_bins="all", Freq=nrow(test)), as.data.frame(table(test_bins)))
 write_tsv(test_bin_counts, "/home/srivbane/shared/caringbridge/data/clean_journals/test_bin_counts.txt", col_names=FALSE)
+test_seq = rbind(data.frame(Freq=nrow(test_bin_counts)), as.data.frame(table(test_bins))[,2])
+write_tsv(test_seq, "/home/srivbane/shared/caringbridge/data/clean_journals/test-seq.dat", col_names=FALSE)
 
 
+
+print(nrow(train_bin_counts))
+print(nrow(test_bin_counts))
 print(train_bin_counts)
 print(test_bin_counts)
+
