@@ -10,5 +10,5 @@ module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts
 DD=/home/srivbane/shared/caringbridge/data/
-journal=clean_journals/clean_journals_no_names.txt
-python -m src.topic_model.extract_model_artifacts --journal_file ${DD}${journal} --data_dir ${DD}topic_model_no_names --keep_n 25000 --num_test 10000 --num_docs 13757900 --num_topics 100 --n_workers 16 --log
+journal=topic_model_hom_names/clean_journals_hom_names_filtered.txt
+python -m src.topic_model.extract_model_artifacts --journal_file ${DD}${journal} --data_dir ${DD}topic_model_hom_names --keep_n 10000 --num_test 0 --num_docs 10916347 --num_topics 150 --n_workers 16 --log

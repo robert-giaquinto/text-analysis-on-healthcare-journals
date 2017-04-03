@@ -66,18 +66,21 @@ class JournalCleaningWorker(object):
 
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
-        custom_stopwords = ['got', 'get', 'til', 'also', 'would', 'could', 'should', 'really',
-                            'didnt', 'cant', 'thats', 'doesnt', 'didnt', 'wont', 'wasnt', 'hows',
-                            'hadnt', 'hasnt', 'willnt', 'isnt', 'arent', 'werent', 'havent',
-                            'wouldnt', 'couldnt', 'shouldnt',  'shouldve', 'couldve', 'wouldve', 
-                            'theres', 'whats', 'whens', 'whos', 'wheres'] + list('abcdefghjklmnopqrstuvwxyz')
+        custom_stopwords = ['today', 'week', 'time', 'know', 'take', 'say', 'back', 'see', 'come', 'still', 'make', 'last', 'little', 'keep', 'thing', 'get',
+            'go', 'well', 'good', 'think', 'much', 'like', 'day', 'one', 'through', 'up', 'down', 'over', 'under', 
+            'got', 'get', 'til', 'also', 'would', 'could', 'should', 'really',
+            'didnt', 'cant', 'thats', 'doesnt', 'didnt', 'wont', 'wasnt', 'hows',
+            'hadnt', 'hasnt', 'willnt', 'isnt', 'arent', 'werent', 'havent',
+            'wouldnt', 'couldnt', 'shouldnt',  'shouldve', 'couldve', 'wouldve', 
+            'theres', 'whats', 'whens', 'whos', 'wheres'] + list('abcdefghjklmnopqrstuvwxyz')
         self.first = FirstNames()
-        not_stopwords = [u'i', u'me', u'my', u'myself', u'we', u'our', u'ours', u'ourselves',
-                         u'they', u'them', u'themselves',
-                         u'you', u'your', u'yours', u'yourself', u'yourselves',
-                         u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself',
-                         u'against', u'through', u'during', u'before', u'after', u'above', u'below',
-                         u'up', u'down', u'over', u'under', u'again', u'why']
+        not_stopwords = [#u'i', u'me', u'my', u'myself',
+            #u'we', u'our', u'ours', u'ourselves', u'us',
+            #u'he', u'him', u'his', u'himself', u'she', u'her', u'hers', u'herself', u'it',
+            #u'they', u'them', u'themselves', u'their', u'theirs',
+            #u'you', u'your', u'yours', u'yourself', u'yourselves',
+            u'against', u'during', u'before', u'after', u'above', u'below',
+            u'again', u'why']
         self.stopword_set = set([w for w in base_stopwords + custom_stopwords if w not in not_stopwords])
 
         self.split_dash1 = re.compile(r"([a-z])([\-/])([a-z])", re.IGNORECASE)
@@ -89,6 +92,11 @@ class JournalCleaningWorker(object):
         
         self.punct = re.compile(r"[^a-zA-Z_ ]") # keeping _'s in so we can use them as a special identifier
 
+        # grammatical person
+        self.first_person = re.compile(r"\b(i|we|me|us|my|mine|our|ours|myself|ourselves)\b", re.IGNORECASE)
+        self.second_person = re.compile(r"\b(you|your|yours|yourself|yourselves)\b", re.IGNORECASE)
+        self.third_person = re.compile(r"\b(he|she|him|her|his|hers|they|them|their|theirs|themselves|himself|herself)\b", re.IGNORECASE)
+        
         # search for contractions
         self.im = re.compile(r"\bim\b", re.IGNORECASE)
         self.iam = re.compile(r"\bi'm\b", re.IGNORECASE)
@@ -320,6 +328,12 @@ class JournalCleaningWorker(object):
         if rm_punct:
             journal.body = self.punct.sub(" ", journal.body)
 
+        # homogenize grammatical person
+        # this looks terrible, remove grammatical person
+        journal.body = self.first_person.sub("", journal.body)
+        journal.body = self.second_person.sub("", journal.body)
+        journal.body = self.third_person.sub("", journal.body)
+            
         # tokenize
         if tokenize:
             journal.body = journal.body.split()
@@ -367,17 +381,17 @@ class JournalCleaningWorker(object):
 
         # split hyphens and slashes where appropriate
         journal.body = self.weekend.sub("weekend ", journal.body)
-        journal.body = self.xray.sub("x_ray ", journal.body)
+        journal.body = self.xray.sub("xray ", journal.body)
         journal.body = self.email.sub("email ", journal.body)
         journal.body = self.split_dash1.sub(r"\1 \3", journal.body)
         journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
         journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
 
         # homogenize special patterns
-        journal.body = self.years.sub(" _year_ ", journal.body)
-        journal.body = self.dollars.sub(" _dollars_ ", journal.body)
-        journal.body = self.percent.sub(" _percent_ ", journal.body)
-        journal.body = self.times.sub(" _time_ ", journal.body)
+        journal.body = self.years.sub(" YEAR ", journal.body)
+        journal.body = self.dollars.sub(" DOLLARS ", journal.body)
+        journal.body = self.percent.sub(" PERCENT ", journal.body)
+        journal.body = self.times.sub(" TIME ", journal.body)
 
         # expand contractions
         # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
@@ -415,18 +429,9 @@ class JournalCleaningWorker(object):
         # remove special characters like &amp &quote
         journal.body = self.special_chars.sub(" ", journal.body)
 
-        # remove remaining punctuation and numbers (except underscores)
-        journal.body = self.punct.sub(" ", journal.body)
-
         # tokenize
         journal.body = journal.body.split()
         journal.tokenized = True # setting this flag helps printing journal objects
-
-        # remove stopwords
-        journal.body = [w for w in journal.body if w.lower() not in self.stopword_set]
-
-        # remove first names and replace them with _name_
-        journal.body = ["_name_" if w.lower() in self.first.names else w for w in journal.body]
 
         return journal
 

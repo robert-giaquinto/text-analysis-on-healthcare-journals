@@ -57,7 +57,7 @@ class GensimLDA(object):
         self.topic_terms = None
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
         self.num_topics = None
-        self.offset = int(round(self.num_train * 0.2))
+        self.offset = int(round(self.num_train * 0.1))
         
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
@@ -603,9 +603,10 @@ def main():
     print("Build LDA model")
     lda = GensimLDA(docs=docs, n_workers=args.n_workers, verbose=args.verbose)
     performance = lda.fit(num_topics=args.num_topics,
-            chunksizes=args.chunksizes,
-            perplexity_threshold=args.threshold,
-            evals_per_pass=args.evals_per_pass)
+                          chunksizes=args.chunksizes,
+                          perplexity_threshold=args.threshold,
+                          evals_per_pass=args.evals_per_pass,
+                          max_passes=1)
     
     print(performance)
 

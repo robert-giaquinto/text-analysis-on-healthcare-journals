@@ -9,4 +9,4 @@ module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts/logs
-python -m src.clean_journal.clean_manager --input_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json2/ --output_file /home/srivbane/shared/caringbridge/data/dev/clean_journals/clean_journals_for_word2vec.txt --clean_method word2vec --n_workers 4 --log
+python -m src.clean_journal.clean_manager --input_dir /home/srivbane/shared/caringbridge/data/dev/parsed_json2/ --output_file /home/srivbane/shared/caringbridge/data/dev/word2vec/clean_journals_for_word2vec.txt --clean_method word2vec --n_workers 4 --log

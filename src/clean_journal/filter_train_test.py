@@ -16,7 +16,7 @@ def main():
     #data_dir = "/home/srivbane/shared/caringbridge/data/dev/clean_journals/"
     data_dir = "/home/srivbane/shared/caringbridge/data/clean_journals/"
     #journal_file = "test.txt"
-    journal_file = "clean_journals_no_names.txt"
+    journal_file = "clean_journals_hom_names.txt"
     train_file = "train_sites.txt"
     train_out = "train_10k_sites_known_hc.txt"
     test_file = "test_sites.txt"
