@@ -66,8 +66,8 @@ class JournalCleaningWorker(object):
 
         # trying to err on the side of not removing too many 'stopwords'
         base_stopwords = stopwords.words("english")
-        custom_stopwords = ['today', 'week', 'time', 'know', 'take', 'say', 'back', 'see', 'come', 'still', 'make', 'last', 'little', 'keep', 'thing', 'get',
-            'go', 'well', 'good', 'think', 'much', 'like', 'day', 'one', 'through', 'up', 'down', 'over', 'under', 
+        custom_stopwords = ['take', 'say', 'back', 'see', 'come', 'still', 'make', 'thing', 'get',
+            'go', 'well', 'good', 'think', 'much', 'like', 'through', 'up', 'down', 'over', 'under', 
             'got', 'get', 'til', 'also', 'would', 'could', 'should', 'really',
             'didnt', 'cant', 'thats', 'doesnt', 'didnt', 'wont', 'wasnt', 'hows',
             'hadnt', 'hasnt', 'willnt', 'isnt', 'arent', 'werent', 'havent',
@@ -137,7 +137,9 @@ class JournalCleaningWorker(object):
         self.dollars = re.compile(r"\$[1-9][0-9,\.]*")
         self.percent = re.compile(r"[1-9][0-9\.]*\%")
         self.times = re.compile(r"(2[0-3]|[01]?[0-9]):([0-5]?[0-9])")
-        # email addresses? dates? numbers?
+        self.urls = re.compile(ur'((http|ftp|https)://)?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?', re.IGNORECASE)
+        self.dates = re.compile(ur"\b1?[0-9]?[-/]1?[0-9]?[-/](18|19|20)?[0-9]{2}\b")
+        self.emails = re.compile(ur"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b", re.IGNORECASE)
 
         # remove special characters that aren't needed (ex. &quot; &amp;)
         self.special_chars = re.compile(r"&[a-z]+;")
@@ -282,6 +284,9 @@ class JournalCleaningWorker(object):
             journal.body = self.dollars.sub(" _dollars_ ", journal.body)
             journal.body = self.percent.sub(" _percent_ ", journal.body)
             journal.body = self.times.sub(" _time_ ", journal.body)
+            journal.body = self.urls.sub(" _url_ ", journal.body)
+            journal.body = self.dates.sub(" _date_ ", journal.body)
+            journal.body = self.emails.sub(" _email_ ", journal.body)
 
         # save emojis
         # ??? don't know how, what emojis are out there?
@@ -387,12 +392,6 @@ class JournalCleaningWorker(object):
         journal.body = self.split_dash2.sub(r"\1 \3", journal.body)
         journal.body = self.split_dash3.sub(r"\1 \3", journal.body)
 
-        # homogenize special patterns
-        journal.body = self.years.sub(" YEAR ", journal.body)
-        journal.body = self.dollars.sub(" DOLLARS ", journal.body)
-        journal.body = self.percent.sub(" PERCENT ", journal.body)
-        journal.body = self.times.sub(" TIME ", journal.body)
-
         # expand contractions
         # TODO Should am/has/is/etc just be deleted to save time? (they're stopwords)
         journal.body = self.iam.sub("i am", journal.body)
@@ -434,7 +433,6 @@ class JournalCleaningWorker(object):
         journal.tokenized = True # setting this flag helps printing journal objects
 
         return journal
-
     
     def clean_and_save(self):
         """

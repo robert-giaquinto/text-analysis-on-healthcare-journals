@@ -1,0 +1,19 @@
+#!/bin/bash -l
+#PBS -l walltime=24:00:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab
+#PBS -o preprocess_word_embeddings.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N preprocess_word_embeddings
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+data_dir=/home/srivbane/shared/caringbridge/data/word_embeddings/
+input_file=clean_journals_for_word2vec.txt
+#sort -n ${data_dir}${input_file} -t$'\t' -k1,4 -o ${data_dir}${input_file} -S 80% -T /home/srivbane/shared/caringbridge/data/tmp
+#cut -d$'\t' -f 1-4 ${data_dir}${input_file} > ${data_dir}clean_journals_for_word2vec_keys.txt
+#R CMD BATCH --no-save --no-restore ${data_dir}find_keep_sites.r ${data_dir}find_keep_sites.Rout
+filtered_file=clean_journals_for_word2vec_filtered.txt
+#python -m src.clean_journal.filter_journals --data_dir ${data_dir} --input_file ${input_file} --output_file ${filtered_file} --keep_file keep_sites.txt 
+python -m src.clean_journal.parse_sentences --data_dir ${data_dir} --input_file ${filtered_file} --output_file clean_sentences_for_word2vec.txt 

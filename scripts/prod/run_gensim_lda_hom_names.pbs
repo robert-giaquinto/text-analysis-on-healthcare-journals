@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#PBS -l walltime=20:00:00,nodes=1:ppn=16,mem=62gb
+#PBS -q small
+#PBS -o lda_hom_name.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N lda_hom_name
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+DD=/home/srivbane/shared/caringbridge/data/
+python -m src.topic_model.gensim_lda --journal_file ${DD}topic_model_hom_names/clean_journals_hom_names_filtered.txt --data_dir ${DD}topic_model_hom_names --keep_n 10000 --num_test 0 --num_docs 10916347 --num_topics 200 --chunksizes 4096 --threshold 0.0 --n_workers 16 --evals_per_pass 10 --log --no_score

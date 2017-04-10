@@ -1,5 +1,6 @@
 from __future__ import division, print_function, absolute_import
 import os
+import argparse
 
 
 def day_counts(keys_file):
@@ -34,17 +35,26 @@ def build_data(keys_file, out_file, ldac_file):
 
     
 def main():
-    data_dir = '/home/srivbane/shared/caringbridge/data/cdtm/'
-    keys_file = 'train_10k_sites_known_hc_key.txt'
-    ldac_file = 'train-mult.dat'
-    out_file = 'train.dat'
-    build_data(data_dir + keys_file, data_dir + out_file, data_dir + ldac_file)
+    parser = argparse.ArgumentParser(description='build cdtm data')
+    parser.add_argument('--data_dir', type=str, help='Data directory where input and output files should be/go.')
+    parser.add_argument('--train_keys', type=str, help='train keys file.')
+    parser.add_argument('--test_keys', type=str, help='test keys file.')
+    parser.add_argument('--train_out', type=str, help='train out file.')
+    parser.add_argument('--test_out', type=str, help='test out file.')
+    args = parser.parse_args()
 
-    keys_file = 'test_10k_sites_known_hc_key.txt'
-    ldac_file = 'holdout-mult.dat'
-    out_file = 'holdout.dat'
-    build_data(data_dir + keys_file, data_dir + out_file, data_dir + ldac_file)
+    print('build_cdtm_data.py')
+    print(args)
 
+    train_keys = os.path.join(args.data_dir, args.train_keys)
+    test_keys = os.path.join(args.data_dir, args.test_keys)
+    train_out = os.path.join(args.data_dir, args.train_out)
+    test_out = os.path.join(args.data_dir, args.test_out)
+    train_ldac = os.path.join(args.data_dir, 'train-mult.dat')
+    test_ldac = os.path.join(args.data_dir, 'test-mult.dat')
+
+    build_data(train_keys, train_out, train_ldac)
+    build_data(test_keys, test_out, test_ldac)
     
 
 if __name__ == "__main__":

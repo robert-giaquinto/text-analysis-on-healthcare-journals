@@ -21,7 +21,7 @@ class Documents(object):
     used creating the vocabulary, and storing/loading the BOW data
     without needed to rebuild the BOW every time
     """
-    def __init__(self, journal_file, num_test, data_dir=None, keep_n=25000, no_above=0.9, rebuild=True, num_docs=None, shuffle=True, prune_at=4000000, verbose=False):
+    def __init__(self, journal_file, num_test, data_dir, keep_n=25000, no_above=0.9, rebuild=True, num_docs=None, shuffle=True, prune_at=4000000, verbose=False):
         """
         Args:
             journal_file: full file name of the big flat file of all tokenized journals and their keys.
@@ -46,11 +46,7 @@ class Documents(object):
         self.num_test = num_test
         self.shuffle = shuffle
         self.prune_at = prune_at
-
-        if data_dir is None:
-            self.data_dir = os.path.dirname(journal_file).replace("clean_journals", "topic_model")
-        else:
-            self.data_dir = data_dir
+        self.data_dir = data_dir
 
         # init variable to store the vocab in memory
         self.vocab = None

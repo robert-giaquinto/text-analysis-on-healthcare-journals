@@ -1,6 +1,6 @@
 from __future__ import print_function, division, absolute_import
 import os
-
+import argparse
 
 def gather_health_conditions(hc_file, hc_out_keys_file):
     hc_keys = {}
@@ -69,24 +69,37 @@ def write_apt_data(keys_file, cdtm_file, out_file, author_hc=None):
     kfile.close()
 
 def main():
+    parser = argparse.ArgumentParser(description='build data for APT model.')
+    parser.add_argument('--data_dir', type=str, help='Data directory where input and output files should be/go.')
+    parser.add_argument('--train_cdtm', type=str, help='train.')
+    parser.add_argument('--test_cdtm', type=str, help='test.')
+    parser.add_argument('--train_keys', type=str, help='train keys.')
+    parser.add_argument('--test_keys', type=str, help='test keys.')
+    parser.add_argument('--hc_file', type=str, help='health conditions file.')
+    args = parser.parse_args()
+
+    print('parse_sentences.py')
+    print(args)
+
     data_dir = "/home/srivbane/shared/caringbridge/data/apt/"
-    hc_file = "/home/srivbane/shared/caringbridge/data/clean_journals/health_condition.txt"
-    hc_out_keys_file = data_dir + "health_condition_key.txt"
-    train_keys_file = data_dir + "train_10k_sites_known_hc_key.txt"
-    train_cdtm_file = data_dir + "train.dat"
-    train_out_file = data_dir + "train-apt.dat"
-    holdout_keys_file = data_dir + "test_10k_sites_known_hc_key.txt"
-    holdout_cdtm_file = data_dir + "holdout.dat"
-    holdout_out_file = data_dir + "holdout-apt.dat"
+    hc_file = os.path.join(args.data_dir, args.hc_file)
+    hc_out_keys = os.path.join(args.data_dir, "health_condition_key.txt")
+    train_keys = os.path.join(args.data_dir, args.train_keys)
+    train_cdtm_file = os.path.join(args.data_dir, args.train_cdtm)
+    train_out = os.path.join(args.data_dir, "train-apt.dat")
+    
+    test_keys = os.path.join(args.data_dir, args.test_keys)
+    test_cdtm = os.path.join(args.data_dir, args.test_cdtm)
+    holdout_out = os.path.join(args.data_dir, "test-apt.dat")
 
     # process health conditions
     print("Gathering author health condition lookup table")
-    author_hc = gather_health_conditions(hc_file, hc_out_keys_file)
+    author_hc = gather_health_conditions(hc_file, hc_out_keys)
 
     # write apt data
     print("Writing apt data, assuming the keys and train file are ordered the same")
-    write_apt_data(train_keys_file, train_cdtm_file, train_out_file, author_hc)
-    write_apt_data(holdout_keys_file, holdout_cdtm_file, holdout_out_file, author_hc)
+    write_apt_data(train_keys, train_cdtm, train_out, author_hc)
+    write_apt_data(test_keys, test_cdtm, test_out, author_hc)
 
 
 if __name__ == "__main__":

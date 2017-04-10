@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 import os
 import subprocess
 import datetime as dt
-
+import argparse
 
 def to_date(x):
     return dt.datetime.fromtimestamp(x/1000)
@@ -13,26 +13,24 @@ def dif_days(x, y):
 
 
 def main():
-    #data_dir = "/home/srivbane/shared/caringbridge/data/dev/clean_journals/"
-    data_dir = "/home/srivbane/shared/caringbridge/data/clean_journals/"
-    #journal_file = "test.txt"
-    journal_file = "clean_journals_hom_names.txt"
-    train_file = "train_sites.txt"
-    train_out = "train_10k_sites_known_hc.txt"
-    test_file = "test_sites.txt"
-    test_out = "test_10k_sites_known_hc.txt"
+    parser = argparse.ArgumentParser(description='This program filters a journal file to on keep certain sites and removes duplicate journals..')
+    parser.add_argument('--data_dir', type=str, help='Data directory where input and output files should be/go.')
+    parser.add_argument('--input_file', type=str, help='Name of file to read input journals from.')
+    parser.add_argument('--train_sites', type=str, help='List of sites for training.')
+    parser.add_argument('--test_sites', type=str, help='List of sites for testing.')
+    parser.add_argument('--train_output', type=str, help='training file written out.')
+    parser.add_argument('--test_output', type=str, help='testing file written out.')
+    args = parser.parse_args()
 
-    # Make sure that the journal file is sorted
-    check_sorted_cmd = """/bin/bash -c "sort -nc %s -t$'\t' -k1,4 -S %s" """ % (data_dir + journal_file, "80%")
-    try:
-        subprocess.check_call(check_sorted_cmd, shell=True)
-        print("File aleady sorted properly.")
-    except subprocess.CalledProcessError as e:
-        print("Sorting file.")
-        cmd = """/bin/bash -c "sort -n %s -t$'\t' -k1,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (data_dir + journal_file, data_dir + "sorted_" + journal_file, "80%")
-        subprocess.call(cmd, shell=True)
-        journal_file = "sorted_" + journal_file
+    print('filter_train_test.py')
+    print(args)
 
+    input_file = os.path.join(args.data_dir, args.input_file)
+    train_output = os.path.join(args.data_dir, args.train_output)
+    test_output = os.path.join(args.data_dir, args.test_output)
+    train_file = os.path.join(args.data_dir, args.train_sites)
+    test_file = os.path.join(args.data_dir, args.test_sites)
+    
     # read in the train site ids and test site ids
     train_sites = {}
     with open(data_dir + train_file, "r") as train:
@@ -104,14 +102,6 @@ def main():
                 else:
                     prev_dest = "skip" # if we see this site again, skip it
                     continue
-
-    # sort the final results by time
-    print("Sorting final results by time")
-    cmd = """/bin/bash -c "sort -n %s -t$'\t' -k4,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (data_dir + train_out, data_dir + train_out, "80%")
-    subprocess.call(cmd, shell=True)
-    cmd = """/bin/bash -c "sort -n %s -t$'\t' -k4,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (data_dir + test_out, data_dir + test_out, "80%")
-    subprocess.call(cmd, shell=True)
-
 
 
 if __name__ == "__main__":

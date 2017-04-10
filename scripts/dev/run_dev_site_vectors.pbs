@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#PBS -l walltime=02:00:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab
+#PBS -o site_vectors.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N site_vectors
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+data_dir=/home/srivbane/shared/caringbridge/data/dev/word2vec/
+input_file=clean_sentences_for_word2vec.txt
+output_file=site_vectors.txt
+python -m src.word_embeddings.site_vectors --data_dir ${data_dir} --input_file ${input_file} --output_file ${output_file}

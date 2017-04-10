@@ -1,0 +1,14 @@
+#!/bin/bash -l
+#PBS -l walltime=24:00:00,nodes=1:ppn=8,mem=22gb
+#PBS -q lab
+#PBS -o word_embeddings.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N word_embeddings
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/logs
+data_dir=/home/srivbane/shared/caringbridge/data/word_embeddings/
+input_file=clean_sentences_for_word2vec.txt
+python -m src.word_embeddings.word2vec --data_dir ${data_dir} --input_file ${input_file} --workers 8 --epochs 25 

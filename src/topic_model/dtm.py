@@ -14,12 +14,12 @@ logger.setLevel(logging.DEBUG)
 def main():
     parser = argparse.ArgumentParser(description='Wrapper around the gensim LDA model.')
     parser.add_argument('--train_file', type=str, help='Training set.')
-    parser.add_argument('--holdout_file', type=str, help='Holdout set.')
+    parser.add_argument('--test_file', type=str, help='Holdout set.')
     parser.add_argument('--data_dir', type=str, help='Directory of where to save or load bag-of-words, vocabulary, and model performance files.')
     parser.add_argument('--dtm_binary', type=str, help='Path for where to find the dynamic topic model binary file.')
     parser.add_argument('--keep_n', type=int, help='How many terms (max) to keep in the dictionary file.')
-    parser.add_argument('--num_train', type=int, help="Number of documents in the journal file (specifying this can speed things up).")
-    parser.add_argument('--num_test', type=int, help="Number of documents in the holdout set.")
+    parser.add_argument('--num_train', type=int, default=None, help="Number of documents in the journal file (specifying this can speed things up).")
+    parser.add_argument('--num_test', type=int, default=None, help="Number of documents in the holdout set.")
     parser.add_argument('--num_topics', type=int, help="Number of topics in the model you want to use.")
     parser.add_argument('--data', dest="data", action="store_true", help='Only build the data needed for these analyses and then stop.')
     parser.set_defaults(data=False)
@@ -28,7 +28,7 @@ def main():
     print('dtm.py')
     print(args)
 
-    holdout_file = args.data_dir + "holdout-mult.dat"
+    holdout_file = args.data_dir + "test-mult.dat"
     train_file = args.data_dir + "train-mult.dat"
     if not os.path.isfile(train_file):
         print("Loading training documents")
@@ -73,7 +73,7 @@ def main():
 
         print("scoring holdout set")
         cmd = "/home/srivbane/smit7982/dtm/dtm/main --ntopics={p1} --mode=time --corpus_prefix={p2} --rng_seed=0".format(p1=args.num_topics, p2=args.data_dir + "train")
-        cmd += " --heldout_corpus_prefix={p3} --lda_model_prefix={p4} --outname={p5}".format(p3=args.data_dir + "holdout", p4=args.data_dir + "train_out/lda-seq/", p5=args.data_dir + "out")
+        cmd += " --heldout_corpus_prefix={p3} --lda_model_prefix={p4} --outname={p5}".format(p3=args.data_dir + "test", p4=args.data_dir + "train_out/lda-seq/", p5=args.data_dir + "out")
         print("Running command", cmd)
         subprocess.call(cmd, shell=True)
     

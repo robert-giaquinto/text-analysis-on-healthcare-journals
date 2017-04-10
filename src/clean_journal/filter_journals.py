@@ -2,29 +2,35 @@ from __future__ import division, print_function, absolute_import
 import os
 import subprocess
 import datetime as dt
-
+import argparse
 
 def main():
-    #data_dir = "/home/srivbane/shared/caringbridge/data/clean_journals/"
-    data_dir = "/home/srivbane/shared/caringbridge/data/word_embeddings/"
-    journal_file = "clean_journals_for_word2vec.txt"
-    out_dir = "/home/srivbane/shared/caringbridge/data/word_embeddings/"
-    keep_sites_file = "keep_sites.txt"
-    keep_out = "clean_journals_for_word2vec_filtered.txt"
+    parser = argparse.ArgumentParser(description='This program filters a journal file to on keep certain sites and removes duplicate journals..')
+    parser.add_argument('--data_dir', type=str, help='Data directory where input and output files should be/go.')
+    parser.add_argument('--input_file', type=str, help='Name of file to read input journals from.')
+    parser.add_argument('--output_file', type=str, help='Name of file to write out all the results to.')
+    parser.add_argument('--keep_file', type=str, help='Name of keep file containing list of sites to keep.')
+    args = parser.parse_args()
+
+    print('filter_journals.py')
+    print(args)
+    journal_file = os.path.join(args.data_dir, args.input_file)
+    filtered_file = os.path.join(args.data_dir, args.output_file)
+    keep_file = os.path.join(args.data_dir, args.keep_file)
 
     # Make sure that the journal file is sorted
-    check_sorted_cmd = """/bin/bash -c "sort -nc %s -t$'\t' -k1,4 -S %s" """ % (data_dir + journal_file, "80%")
+    check_sorted_cmd = """/bin/bash -c "sort -nc %s -t$'\t' -k1,4 -S %s" """ % (journal_file, "80%")
     try:
         subprocess.check_call(check_sorted_cmd, shell=True)
         print("File aleady sorted properly.")
     except subprocess.CalledProcessError as e:
         print("Sorting file.")
-        cmd = """/bin/bash -c "sort -n %s -t$'\t' -k1,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (data_dir + journal_file, data_dir + journal_file, "80%")
+        cmd = """/bin/bash -c "sort -n %s -t$'\t' -k1,4 -o %s -S %s -T /home/srivbane/shared/caringbridge/data/tmp" """ % (journal_file, journal_file, "80%")
         subprocess.call(cmd, shell=True)
 
     # read in the keep site ids and test site ids
     keep_sites = []
-    with open(out_dir + keep_sites_file, "r") as keep:
+    with open(keep_file, "r") as keep:
         for line in keep:
             fields = line.split("\t")
             keep_sites.append(fields[0])
@@ -35,7 +41,7 @@ def main():
     prev_keys = ""
     prev_site = ""
     prev_dist = ""
-    with open(data_dir + journal_file, "r") as journal, open(out_dir + keep_out, "wb") as keep:
+    with open(journal_file, "r") as journal, open(filtered_file, "wb") as filtered:
         for line in journal:
             if line == "\n":
                 break
@@ -61,7 +67,7 @@ def main():
             if site == prev_site:
                 # this is another post from same site, we know where it goes
                 if prev_dest == "keep":
-                    keep.write(line)
+                    filtered.write(line)
                 else:
                     continue
             else:
@@ -70,7 +76,7 @@ def main():
                 # where should this new site go?
                 if site in keep_sites:
                     prev_dest = "keep" # if we see this site again, it goes in keep
-                    keep.write(line)
+                    filtered.write(line)
                 else:
                     prev_dest = "skip" # if we see this site again, skip it
                     continue
