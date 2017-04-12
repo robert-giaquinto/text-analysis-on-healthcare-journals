@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#PBS -l walltime=24:00:00,nodes=1:ppn=1,mem=22gb
-#PBS -q lab
+#PBS -l walltime=48:00:00,nodes=1:ppn=1,mem=20gb
+#PBS -q lab-long
 #PBS -o preprocess_word_embeddings.log
 #PBS -m abe
 #PBS -M smit7982@umn.edu
@@ -16,4 +16,4 @@ input_file=clean_journals_for_word2vec.txt
 #R CMD BATCH --no-save --no-restore ${data_dir}find_keep_sites.r ${data_dir}find_keep_sites.Rout
 filtered_file=clean_journals_for_word2vec_filtered.txt
 #python -m src.clean_journal.filter_journals --data_dir ${data_dir} --input_file ${input_file} --output_file ${filtered_file} --keep_file keep_sites.txt 
-python -m src.clean_journal.parse_sentences --data_dir ${data_dir} --input_file ${filtered_file} --output_file clean_sentences_for_word2vec.txt 
+python -m src.clean_journal.parse_sentences --data_dir ${data_dir} --input_file ${filtered_file} --output_file clean_sentences_for_word2vec.txt

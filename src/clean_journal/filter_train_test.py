@@ -18,28 +18,28 @@ def main():
     parser.add_argument('--input_file', type=str, help='Name of file to read input journals from.')
     parser.add_argument('--train_sites', type=str, help='List of sites for training.')
     parser.add_argument('--test_sites', type=str, help='List of sites for testing.')
-    parser.add_argument('--train_output', type=str, help='training file written out.')
-    parser.add_argument('--test_output', type=str, help='testing file written out.')
+    parser.add_argument('--train_out', type=str, help='training file written out.')
+    parser.add_argument('--test_out', type=str, help='testing file written out.')
     args = parser.parse_args()
 
     print('filter_train_test.py')
     print(args)
 
     input_file = os.path.join(args.data_dir, args.input_file)
-    train_output = os.path.join(args.data_dir, args.train_output)
-    test_output = os.path.join(args.data_dir, args.test_output)
+    train_out = os.path.join(args.data_dir, args.train_out)
+    test_out = os.path.join(args.data_dir, args.test_out)
     train_file = os.path.join(args.data_dir, args.train_sites)
     test_file = os.path.join(args.data_dir, args.test_sites)
     
     # read in the train site ids and test site ids
     train_sites = {}
-    with open(data_dir + train_file, "r") as train:
+    with open(train_file, "r") as train:
         for line in train:
             fields = line.split("\t")
             train_sites[fields[0]] = int(fields[1])
 
     test_sites = {}
-    with open(data_dir + test_file, "r") as test:
+    with open(test_file, "r") as test:
         for line in test:
             fields = line.split("\t")
             test_sites[fields[0]] = int(fields[1])
@@ -50,7 +50,7 @@ def main():
     prev_keys = ""
     prev_site = ""
     prev_dist = ""
-    with open(data_dir + journal_file, "r") as journal, open(data_dir + train_out, "wb") as train, open(data_dir + test_out, "wb") as test:
+    with open(input_file, "r") as journal, open(train_out, "wb") as train, open(test_out, "wb") as test:
         for line in journal:
             if line == "\n":
                 break

@@ -1,0 +1,10 @@
+#!/bin/bash -l
+#PBS -l walltime=120:00:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab-long
+#PBS -o cdtm.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N cdtm-results
+cd ~/cdtm
+./cdtm est settings.txt /home/srivbane/shared/caringbridge/data/lda_over_time/train_cdtm.dat seeded /home/srivbane/shared/caringbridge/data/lda_over_time/cdtm_out/
+

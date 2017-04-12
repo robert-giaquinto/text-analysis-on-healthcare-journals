@@ -1,0 +1,10 @@
+#!/bin/bash -l
+#PBS -l walltime=24:00:00,nodes=1:ppn=1,mem=22gb
+#PBS -q lab
+#PBS -o cdtm-inference.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N cdtm-inference
+cd ~/cdtm
+./cdtm inf settings.txt /home/srivbane/shared/caringbridge/data/lda_over_time/test_cdtm.dat /home/srivbane/shared/caringbridge/data/cdtm/model.dat /home/srivbane/shared/caringbridge/data/cdtm/
+

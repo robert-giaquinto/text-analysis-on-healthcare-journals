@@ -3,6 +3,7 @@ import spacy
 import os
 import re
 import argparse
+from src.word_embeddings.word2vec import SentenceIterator
 
 def main():
     parser = argparse.ArgumentParser(description='parse sentences from journals for training word2vec.')
@@ -31,12 +32,13 @@ def main():
     emails = re.compile(ur"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}\b", re.IGNORECASE)
     
     print("Beginning parsing...")
+    sentences = SentenceIterator(input_file)
     with open(input_file, "r") as f, open(output_file, "wb") as o:
         for line in f:
             fields = line.replace("\n","").split("\t")
-            doc = nlp(fields[-1])
+            d = nlp(fields[-1])
             s = -1
-            for sentence in doc.sents:
+            for sentence in d.sents:
                 if sentence is None:
                     # ignore empty sentences
                     continue

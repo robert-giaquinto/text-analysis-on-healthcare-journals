@@ -107,7 +107,7 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
 def read_bins(bin_file):
     total = 0
     bin_counts = []
-    with open(bin_file, "rb") as f:
+    with open(bin_file, "r") as f:
         for i, line in enumerate(f):
             if line == "\n":
                 break

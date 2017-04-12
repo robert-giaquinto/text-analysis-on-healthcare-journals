@@ -1,10 +1,10 @@
 #!/bin/bash -l
 #PBS -l walltime=00:30:00,nodes=1:ppn=1,mem=22gb
 #PBS -q lab
-#PBS -o filter_train_test.log
+#PBS -o prepare_apt_experiments.log
 #PBS -m abe
 #PBS -M smit7982@umn.edu
-#PBS -N filter_train_test
+#PBS -N prepare_apt_experiments
 module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
@@ -24,7 +24,7 @@ train_sites=train_sites.txt
 test_sites=test_sites.txt
 train_out=train.txt
 test_out=test.txt
-python -m src.clean_journal.filter_train_test --data_dir ${data_dir} --input_file ${input_file} --train_sites ${train_sites} --test_sites ${test_sites} --train_output ${train_out} --test_output ${test_out}
+python -m src.clean_journal.filter_train_test --data_dir ${data_dir} --input_file ${input_file} --train_sites ${train_sites} --test_sites ${test_sites} --train_out ${train_out} --test_out ${test_out}
 
 # sort final results by time
 sort -n ${data_dir}${train_out} -t$'\t' -k4,4 -o ${data_dir}${train_out} -S 80% -T /home/srivbane/shared/caringbridge/data/tmp
@@ -35,7 +35,7 @@ vocab_size=10000
 num_topics=50
 
 # prepare LDA over time data
-python -m src.topic_model.lda_over_time --train ${data_dir}train.txt --test ${data_dir}test.txt --train_bins ${data_dir}train_bin_counts.txt --test_bins ${data_dir}test_bin_counts.txt --data_dir ${DD}lda_over_time --keep_n ${vocab_size} --no_above 0.90 --num_topics ${num_topics} --log --data
+python -m src.topic_model.lda_over_time --train ${data_dir}train.txt --test ${data_dir}test.txt --train_bins ${data_dir}train_bin_counts.txt --test_bins ${data_dir}test_bin_counts.txt --data_dir ${data_dir} --keep_n ${vocab_size} --no_above 0.90 --num_topics ${num_topics} --log --data
 
 # prepare dtm data
 dtm_home=/home/srivbane/smit7982/dtm/dtm/main
@@ -48,7 +48,7 @@ cut -d$'\t' -f 1-4 ${data_dir}${train_out} > ${data_dir}${train_keys}
 cut -d$'\t' -f 1-4 ${data_dir}${test_out} > ${data_dir}${test_keys}
 train_cdtm=train_cdtm.dat
 test_cdtm=test_cdtm.dat
-python -m src.topic_model.build_cdtm_data.py --data_dir ${data_dir} --train_keys ${train_keys} --test_keys ${test_keys} --train_out ${train_cdtm} --test_out ${test_cdtm}
+python -m src.topic_model.build_cdtm_data --data_dir ${data_dir} --train_keys ${train_keys} --test_keys ${test_keys} --train_out ${train_cdtm} --test_out ${test_cdtm}
 
 # prepare apt data
 python -m src.topic_model.build_apt_data --data_dir ${data_dir} --hc_file health_condition.txt --train_cdtm ${train_cdtm} --test_cdtm ${test_cdtm} --train_keys ${train_keys} --test_keys ${test_keys}

@@ -21,11 +21,12 @@ class SentenceIterator(object):
         Note all keys are returned/treated as text
         :return:
         """
-        for line in open(self.input_file, "r"):
-            fields = line.split("\t")
-            tokens = fields[-1].split()  # list of tokens
-            if len(tokens) > 1:
-                yield tokens
+        with open(self.input_file, "r") as f:
+            for line in f:
+                fields = line.split("\t")
+                tokens = fields[-1].split()  # list of tokens
+                if len(tokens) > 1:
+                    yield tokens
 
 
 class W2V(object):

@@ -16,4 +16,4 @@ cut -d$'\t' -f 1-4 ${data_dir}${input_file} > ${data_dir}clean_journals_for_word
 R CMD BATCH --no-save --no-restore ${data_dir}find_keep_sites.r ${data_dir}find_keep_sites.Rout
 filtered_file=clean_journals_for_word2vec_filtered.txt
 python -m src.clean_journal.filter_journals --data_dir ${data_dir} --input_file ${input_file} --output_file ${filtered_file} --keep_file keep_sites.txt 
-python -m src.clean_journal.parse_sentences --data_dir ${data_dir} --input_file ${filtered_file} --output_file clean_sentences_for_word2vec.txt 
+python -m src.clean_journal.parse_sentences --data_dir ${data_dir} --input_file ${filtered_file} --output_file clean_sentences_for_word2vec.txt

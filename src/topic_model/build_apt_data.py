@@ -85,12 +85,12 @@ def main():
     hc_file = os.path.join(args.data_dir, args.hc_file)
     hc_out_keys = os.path.join(args.data_dir, "health_condition_key.txt")
     train_keys = os.path.join(args.data_dir, args.train_keys)
-    train_cdtm_file = os.path.join(args.data_dir, args.train_cdtm)
-    train_out = os.path.join(args.data_dir, "train-apt.dat")
+    train_cdtm = os.path.join(args.data_dir, args.train_cdtm)
+    train_out = os.path.join(args.data_dir, "train_apt.dat")
     
     test_keys = os.path.join(args.data_dir, args.test_keys)
     test_cdtm = os.path.join(args.data_dir, args.test_cdtm)
-    holdout_out = os.path.join(args.data_dir, "test-apt.dat")
+    test_out = os.path.join(args.data_dir, "test_apt.dat")
 
     # process health conditions
     print("Gathering author health condition lookup table")
