@@ -1,0 +1,12 @@
+#!/bin/bash -l
+#PBS -l walltime=24:00:00,nodes=1:ppn=12,mem=22gb
+#PBS -q lab
+#PBS -o classify_health_condition_word2vec_sum.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N classify_health_condition_word2vec_sum
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/prod
+python -m src.classify_health_condition.word2vec_features --feats_file /home/srivbane/shared/caringbridge/data/word_embeddings/sum_site_vectors.txt --cv 10 --n_jobs 12

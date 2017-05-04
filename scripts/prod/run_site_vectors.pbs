@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#PBS -l walltime=02:00:00,nodes=1:ppn=1,mem=22gb
+#PBS -l walltime=8:00:00,nodes=1:ppn=1,mem=22gb
 #PBS -q lab
 #PBS -o site_vectors.log
 #PBS -m abe
@@ -11,5 +11,5 @@ source ~/venv/bin/activate
 cd ~/text-analysis/scripts/logs
 data_dir=/home/srivbane/shared/caringbridge/data/word_embeddings/
 input_file=clean_sentences_for_word2vec.txt
-output_file=site_vectors.txt
-python -m src.word_embeddings.site_vectors --data_dir ${data_dir} --input_file ${input_file} --output_file ${output_file}
+output_file=sum_site_vectors.txt
+python -m src.word_embeddings.site_vectors --data_dir ${data_dir} --input_file ${input_file} --output_file ${output_file} --method sum

@@ -105,8 +105,8 @@ def main():
 
     
     vocab = set(w2v.model.index2word)
-    n = 15
-    terms = ['purpose', 'healing', 'heal', 'community', 'support', 'emotional', 'mental', 'need', 'kindness', 'compassion', 'isolation', 'thank', 'hope', 'well', 'being', 'reflect', 'anxious', 'accept', 'aware']
+    n = 20
+    terms = ['cancer', 'surgery', 'transplant', 'injury', 'stroke', 'neurological', 'infant', 'childbirth', 'congenital', 'immune', 'purpose', 'healing', 'heal', 'community', 'support', 'emotional', 'mental', 'need', 'kindness', 'compassion', 'isolation', 'thank', 'hope', 'well', 'being', 'reflect', 'anxious', 'accept', 'aware']
     with open(os.path.join(args.data_dir, 'key_concept_vectors.txt'), 'wb') as f:
         f.write('key_concept\tterm\t' + '\t'.join(['vec' + str(i) for i in range(100)]) + '\n')
         for t in terms:
