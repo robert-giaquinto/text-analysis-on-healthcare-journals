@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(description='Train word2vec models on an input file.')
     parser.add_argument('--w2v_file', type=str, default='/home/srivbane/shared/caringbridge/data/word_embeddings/w2v_of_clean_sentences_for_word2vec.p', help='Name of pickled word2vec model file.')
     args = parser.parse_args()
-    print("word2vec.py")
+    print("related_words.py")
     print(args)
 
     print("Unpacking model, this may taken a moment...")
@@ -26,15 +26,16 @@ def main():
     positive_seeds = []
     negative_seeds = []
 
-    topn = int(raw_input("How many similar words would you like to show for each input term: "))
-    print("Note you can look for words positively (default) or negatively matching a term")
+    topn = int(raw_input("How many similar words would you like to show for each input term (recommended: 10+): "))
+    print("Note you can look for words positively (default) or negatively matching a list of terms")
     print("If a term is followed by a dash, for example: happy-")
     print("Then it is considered negatively")
-
+    print("For starters you may only want to list one 'seed' term at a time")
+    print("After getting a feel for the results, it can be worth trying to find words nearest multiple positive/negative terms") 
 
     q = ''
     while q != 'q':
-        raw_terms = raw_input("\nPlease enter terms (space separated) that you're interested in: ")
+        raw_terms = raw_input("\nPlease enter one or more terms (space separated): ")
         terms = raw_terms.split()
         positive_terms = []
         negative_terms = []
@@ -70,7 +71,7 @@ def main():
             l = len(word)
             print('\t' + word, ' '*(max_len+5-l), round(vec,3))
 
-        q = raw_input("Enter 'q' if you want to stop, otherwise type anything else to lookup more words: ")
+        q = raw_input("Enter 'q' if you want to stop, otherwise type enter to explore other terms: ")
 
     fname = raw_input("Press enter to quit, otherwise all the results (including word vectors) will be written to the file you specify: ")
     if fname != '':
