@@ -58,7 +58,7 @@ class GensimLDA(object):
         self.topic_term_method = "weighted" # weighted is a tf-idf weighting of terms for each topic, as opposed to standard probability
         self.num_topics = None
         self.offset = int(round(self.num_train * 0.1))
-        
+
         # dictionarys to hold word cooccurences (speeds up NPMI calculation)
         self.doc_token2freq, self.token2freq = None, None
 
@@ -128,20 +128,20 @@ class GensimLDA(object):
         prev_perplexity, perplexity = None, None
         docs_seen = 0
         for p in range(max_passes):
-            logger.info("Pass: " + str(p))
 
             # train on num_train / evals_per pass documents at the time, then evaluate perplexity
             chunk_stream = utils.grouper(self.docs.train_bow, int(ceil(self.num_train / evals_per_pass)), as_numpy=False)
             for i, chunk in enumerate(chunk_stream):
+
+                model.update(corpus=chunk, chunks_as_numpy=False)
+                docs_seen += len(chunk)
+
                 # measure perplexity
                 if self.num_test > 0:
                     perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
                 else:
-                    perplexity = self._perplexity_score(model, chunk, self.num_train)
+                    perplexity = self._perplexity_score(model, chunk)
 
-                model.update(corpus=chunk, chunks_as_numpy=False)
-                docs_seen += len(chunk)
-                    
                 logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
                 convergence['perplexities'].append(perplexity)
                 convergence['docs_seen'].append(docs_seen)
@@ -186,7 +186,7 @@ class GensimLDA(object):
                         model.save(os.path.join(self.docs.data_dir, save_model))
                     else:
                         model.save(os.path.join(self.docs.data_dir, "LDA_docs_" + str(self.num_train) + "_" + str(self.num_test) + "_topics_" + str(n) + "_chucksize_" + str(c) + ".lda"))
-                
+
                 performance.append({'num_topics': n,
                                     'chunksize': c,
                                     'perplexities': convergence['perplexities'],
@@ -222,7 +222,7 @@ class GensimLDA(object):
         else:
             subsample_ratio = 1.0 * total_docs / num_sample
             perword_bound = model.bound(X, subsample_ratio=subsample_ratio) / corpus_words
-            
+
         perplexity = np.exp2(-perword_bound)
         return perplexity
 
@@ -342,9 +342,9 @@ class GensimLDA(object):
         data_dir = os.path.join(os.path.split(output_filename)[0], 'doc_topic_shards/')
         if not os.path.isdir(data_dir):
             os.makedirs(data_dir)
-        
+
         partial_files = [os.path.join(data_dir, 'doc_topic_' + str(i) + '.txt') for i in range(tasks_per_worker * self.n_workers)]
-        
+
         # setup multiprocessing pool
         #pool = mp.Pool(processes=self.n_workers)
         #pool.map(_doc_topic_worker, itertools.izip(chunk_stream, keys_stream, partial_files, itertools.repeat(self.model)))
@@ -382,7 +382,7 @@ class GensimLDA(object):
         # terminate workers
         for worker in range(self.n_workers):
             queue.put('STOP')
-        
+
         # close out queue and workers
         logger.info("closing out pool")
         queue.close()
@@ -439,14 +439,17 @@ class GensimLDA(object):
             betas.append(topic)
         return betas
 
-    def get_theta(self, bows):
+    def get_theta(self, bows, model=None):
         """
         Theta is the parameter for topic distribution over each document
         This can be a little faster than gensim's native 1 document at a time approach to inference
         :param bows: should be a list of bag of words vectors loaded into memory
         :return:
         """
-        gamma, _ = self.model.inference(bows, collect_sstats=False)
+        if model is None:
+            model = self.model
+
+        gamma, _ = model.inference(bows, collect_sstats=False)
         # normalize
         theta = []
         for g in gamma:
@@ -540,7 +543,7 @@ def _handler(input, output):
         result = func(*args)
         output.put(result)
 
-        
+
 def _doc_topic_worker(bow_chunk, keys_chunk, output_file, lda):
     """
     helper function for computing doc_topics in parallel and writing
@@ -605,7 +608,7 @@ def main():
                           perplexity_threshold=args.threshold,
                           evals_per_pass=args.evals_per_pass,
                           max_passes=1)
-    
+
     print(performance)
 
     # save trained model to file
@@ -621,7 +624,7 @@ def main():
         metric = "NPMI"
     else:
         metric = "none"
-    
+
     print("Saving topic terms...")
     lda.save_topic_terms(os.path.join(args.data_dir, "topic_terms.txt"), metric=metric)
 
@@ -632,6 +635,6 @@ def main():
     #print("Saving document topic probabilities")
     #lda.save_doc_topic_probs(docs.train_bow, docs.train_keys, os.path.join(args.data_dir, "train_document_topic_probs.txt"))
 
-    
+
 if __name__ == "__main__":
     main()
