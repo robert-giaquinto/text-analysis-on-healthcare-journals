@@ -9,7 +9,7 @@ module unload python
 module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 DD=/home/srivbane/shared/caringbridge/data/lda_over_time/
-train=train.txt
-holdout=test.txt
+train=train_authors_lda.txt
+holdout=test_authors_lda.txt
 dtm_home=/home/srivbane/smit7982/dtm/dtm/main
-python -m src.topic_model.dtm --train_file ${DD}${train} --test_file ${DD}${holdout} --data_dir ${DD} --keep_n 10000 --num_topics 50 --dtm_binary ${dtm_home}
+python -m src.topic_model.dtm --train_file ${DD}${train} --test_file ${DD}${holdout} --data_dir ${DD} --keep_n 5000 --num_topics 50 --dtm_binary ${dtm_home}

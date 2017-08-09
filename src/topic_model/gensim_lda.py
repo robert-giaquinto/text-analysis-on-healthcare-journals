@@ -216,15 +216,13 @@ class GensimLDA(object):
         """
         Calculate perplexity on a set of documents X
         """
-        if total_docs is None:
-            total_docs = sum(1 for _ in X)
-
         corpus_words = sum(ct for doc in X for _, ct in doc)
-        if num_sample is None:
-            num_sample = len(X)
+        if num_sample is None or total_docs is None:
+            perword_bound = model.bound(X, subsample_ratio=1.0) / corpus_words
+        else:
+            subsample_ratio = 1.0 * total_docs / num_sample
+            perword_bound = model.bound(X, subsample_ratio=subsample_ratio) / corpus_words
             
-        subsample_ratio = 1.0 * total_docs / num_sample
-        perword_bound = model.bound(X, subsample_ratio=subsample_ratio) / (subsample_ratio * corpus_words)
         perplexity = np.exp2(-perword_bound)
         return perplexity
 

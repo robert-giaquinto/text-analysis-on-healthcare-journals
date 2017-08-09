@@ -19,8 +19,9 @@ def gather_health_conditions(hc_file, hc_out_keys_file):
             if hc not in hc_keys:
                 hc_keys[hc] = len(hc_keys) + 1
 
+            clean_hc = hc.replace(' ', '_').replace('/', '_')
             author = fields[0]
-            author_hc[author] = hc_keys[hc]
+            author_hc[author] = clean_hc
 
     with open(hc_out_keys_file, "wb") as f:
         for k, v in sorted(hc_keys.items(), key=lambda x: x[1]):
@@ -82,24 +83,33 @@ def main():
     print(args)
 
     data_dir = "/home/srivbane/shared/caringbridge/data/apt/"
-    hc_file = os.path.join(args.data_dir, args.hc_file)
-    hc_out_keys = os.path.join(args.data_dir, "health_condition_key.txt")
     train_keys = os.path.join(args.data_dir, args.train_keys)
-    train_cdtm = os.path.join(args.data_dir, args.train_cdtm)
-    train_out = os.path.join(args.data_dir, "train_apt.dat")
-    
+    train_cdtm = os.path.join(args.data_dir, args.train_cdtm)    
     test_keys = os.path.join(args.data_dir, args.test_keys)
     test_cdtm = os.path.join(args.data_dir, args.test_cdtm)
-    test_out = os.path.join(args.data_dir, "test_apt.dat")
 
     # process health conditions
-    print("Gathering author health condition lookup table")
-    author_hc = gather_health_conditions(hc_file, hc_out_keys)
+    if args.hc_file is not None:
+        print("Gathering author health condition lookup table")
+        hc_file = os.path.join(args.data_dir, args.hc_file)
+        hc_out_keys = os.path.join(args.data_dir, "health_condition_key.txt")
+        train_out = os.path.join(args.data_dir, "train_apt_hc.dat")
+        test_out = os.path.join(args.data_dir, "test_apt_hc.dat")
 
-    # write apt data
-    print("Writing apt data, assuming the keys and train file are ordered the same")
-    write_apt_data(train_keys, train_cdtm, train_out, author_hc)
-    write_apt_data(test_keys, test_cdtm, test_out, author_hc)
+        author_hc = gather_health_conditions(hc_file, hc_out_keys)
+
+        # write apt data
+        print("Writing apt data, assuming the keys and train file are ordered the same")
+        write_apt_data(train_keys, train_cdtm, train_out, author_hc)
+        write_apt_data(test_keys, test_cdtm, test_out, author_hc)
+    else:
+        train_out = os.path.join(args.data_dir, "train_apt_authors.dat")
+        test_out = os.path.join(args.data_dir, "test_apt_authors.dat")
+        # write apt data
+        print("Writing apt data, assuming the keys and train file are ordered the same")
+        write_apt_data(train_keys, train_cdtm, train_out)
+        write_apt_data(test_keys, test_cdtm, test_out)
+
 
 
 if __name__ == "__main__":

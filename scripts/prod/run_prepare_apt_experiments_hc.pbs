@@ -1,0 +1,56 @@
+#!/bin/bash -l
+#PBS -l walltime=12:30:00,nodes=1:ppn=1,mem=26gb
+#PBS -q small
+#PBS -o prepare_apt_experiments_hc.log
+#PBS -m abe
+#PBS -M smit7982@umn.edu
+#PBS -N prepare_apt_experiments_hc
+module unload python
+module load python2/2.7.12_anaconda4.1.1
+source ~/venv/bin/activate
+cd ~/text-analysis/scripts/prod
+
+data_dir=/home/srivbane/shared/caringbridge/data/lda_over_time/
+input_file=clean_journals_hom_names.txt
+
+# determine which sites should be in training and test sets
+sort -n ${data_dir}${input_file} -t$'\t' -k1,4 -o ${data_dir}${input_file} -S 80% -T /home/srivbane/shared/caringbridge/data/tmp
+input_files_keys=clean_journals_hom_names_keys.txt
+python ${data_dir}journal_keys_and_counts.py --input_file ${data_dir}${input_file} --output_file ${data_dir}${input_files_keys}
+R CMD BATCH --no-save --no-restore ${data_dir}train_test_for_hc.r ${data_dir}train_test_for_hc.Rout
+
+# filter the journals to only include certain sites (those with x < num-posts < y, known HC)
+# and split the journals into train and test files
+train_hc_sites=train_hc_sites.txt
+test_hc_sites=test_hc_sites.txt
+train_hc_out=train_for_hc.txt
+test_hc_out=test_for_hc.txt
+python -m src.clean_journal.filter_train_test --data_dir ${data_dir} --input_file ${input_file} --train_keys ${train_hc_sites} --test_keys ${test_hc_sites} --train_out ${train_hc_out} --test_out ${test_hc_out} --method hc
+
+# sort final results by time
+sort -n ${data_dir}${train_hc_out} -t$'\t' -k4,4 -o ${data_dir}${train_hc_out} -S 80% -T /home/srivbane/shared/caringbridge/data/tmp
+sort -n ${data_dir}${test_hc_out} -t$'\t' -k4,4 -o ${data_dir}${test_hc_out} -S 80% -T /home/srivbane/shared/caringbridge/data/tmp
+
+
+# model params
+vocab_size=5000
+num_topics=50
+
+# prepare LDA over time data
+python -m src.topic_model.lda_over_time --train ${data_dir}${train_hc_out} --test ${data_dir}${test_hc_out} --train_bins ${data_dir}train-hc-seq.dat --test_bins ${data_dir}test-hc-seq.dat --data_dir ${data_dir} --keep_n ${vocab_size} --no_above 0.90 --num_topics ${num_topics} --log --data --rebuild
+
+# prepare dtm data
+dtm_home=/home/srivbane/smit7982/dtm/dtm/main
+python -m src.topic_model.dtm --train_file ${data_dir}${train_hc_out} --test_file ${data_dir}${test_hc_out} --data_dir ${data_dir} --keep_n ${vocab_size} --num_topics ${num_topics} --dtm_binary ${dtm_home} --data
+
+# prepare cdtm data
+train_hc_keys=train_hc_keys.txt
+test_hc_keys=test_hc_keys.txt
+cut -d$'\t' -f 1-4 ${data_dir}${train_hc_out} > ${data_dir}${train_hc_keys}
+cut -d$'\t' -f 1-4 ${data_dir}${test_hc_out} > ${data_dir}${test_hc_keys}
+train_hc_cdtm=train_hc_cdtm.dat
+test_hc_cdtm=test_hc_cdtm.dat
+python -m src.topic_model.build_cdtm_data --data_dir ${data_dir} --train_keys ${train_hc_keys} --test_keys ${test_hc_keys} --train_out ${train_hc_cdtm} --test_out ${test_hc_cdtm} --rounding_days 7
+
+# prepare apt data
+python -m src.topic_model.build_apt_data --data_dir ${data_dir} --hc_file health_condition.txt --train_cdtm ${train_hc_cdtm} --test_cdtm ${test_hc_cdtm} --train_keys ${train_hc_keys} --test_keys ${test_hc_keys}

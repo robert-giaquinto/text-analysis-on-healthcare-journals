@@ -65,15 +65,15 @@ def main():
 
     if not args.data:
         os.chdir(args.data_dir)
-        cmd = "/home/srivbane/smit7982/dtm/dtm/main --ntopics={p1} --model=dtm --mode=fit --initialize_lda=true --corpus_prefix={p2} --outname={p3}".format(p1=args.num_topics, p2=args.data_dir + "train", p3=args.data_dir + "dtm_out")
+        cmd = "/home/srivbane/smit7982/dtm/dtm/main --ntopics={p1} --model=dtm --mode=fit --initialize_lda=true --corpus_prefix={p2} --outname={p3}".format(p1=args.num_topics, p2=args.data_dir + "train-authors", p3=args.data_dir + "dtm_out")
         cmd += " --alpha=0.01  --lda_max_em_iter=20 --lda_sequence_min_iter=6 --lda_sequence_max_iter=20 --top_chain_var=0.005 --rng_seed=0"
         print("Running command", cmd)
         subprocess.call(cmd, shell=True)
         print("training complete")
 
         print("scoring test set")
-        cmd = "/home/srivbane/smit7982/dtm/dtm/main --ntopics={p1} --mode=time --corpus_prefix={p2} --rng_seed=0".format(p1=args.num_topics, p2=args.data_dir + "train")
-        cmd += " --heldout_corpus_prefix={p3} --lda_model_prefix={p4} --outname={p5}".format(p3=args.data_dir + "test", p4=args.data_dir + "dtm_out/lda-seq/", p5=args.data_dir + "dtm_inf_out")
+        cmd = "/home/srivbane/smit7982/dtm/dtm/main --ntopics={p1} --mode=time --corpus_prefix={p2} --rng_seed=0".format(p1=args.num_topics, p2=args.data_dir + "train-authors")
+        cmd += " --heldout_corpus_prefix={p3} --lda_model_prefix={p4} --outname={p5}".format(p3=args.data_dir + "test-authors", p4=args.data_dir + "dtm_out/lda-seq/", p5=args.data_dir + "dtm_inf_out")
         print("Running command", cmd)
         subprocess.call(cmd, shell=True)
     

@@ -49,12 +49,8 @@ def fit_all(train_docs, test_docs, train_bins, test_bins, num_topics, chunksize,
     rval = []
     for test_size, test_chunk in zip(test_bins, test_stream):
         # set total_docs and num_sample to 1 to not use subsampling (for comparison to fit_local)
-        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b),
-                                         total_docs=1,
-                                         num_sample=1)
-        per_word_bound = -1.0 * np.log2(perplexity)
-        rval.append(per_word_bound)
-
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b))
+        rval.append(perplexity)
     return rval
 
 
@@ -93,34 +89,30 @@ def fit_local(train_docs, test_docs, train_bins, test_bins, num_topics, chunksiz
                      save_model="t" + str(i) + "_lda_local.lda")
 
         # test
-        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b),
-                                         total_docs=1,
-                                         num_sample=1)
-        per_word_bound = -1.0 * np.log2(perplexity)
-        logger.info("Per word bound: " + str(per_word_bound))
-        rval.append(per_word_bound)
+        perplexity = m._perplexity_score(m.model, (a for b in test_chunk for a in b))
+        logger.info("Perplexity: " + str(perplexity))
+        rval.append(perplexity)
         
     return rval
 
 
 
 def read_bins(bin_file):
-    total = 0
     bin_counts = []
     with open(bin_file, "r") as f:
         for i, line in enumerate(f):
             if line == "\n":
                 break
             
-            fields = line.split('\t')
+            val = int(float(line.replace("\n", "")))
             try:
                 if i == 0:
-                    total = int(fields[1])
+                    continue
                 else:
-                    bin_counts.append(int(fields[1]))
+                    bin_counts.append(val)
             except:
                 print(line)
-    return total, bin_counts
+    return sum(bin_counts), bin_counts
 
 
 def main():

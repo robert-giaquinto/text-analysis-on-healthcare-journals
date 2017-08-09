@@ -10,4 +10,4 @@ module load python2/2.7.12_anaconda4.1.1
 source ~/venv/bin/activate
 cd ~/text-analysis/scripts/logs
 DD=/home/srivbane/shared/caringbridge/data/lda_over_time/
-python -m src.topic_model.lda_over_time --train ${DD}train.txt --test ${DD}test.txt --train_bins ${DD}train_bin_counts.txt --test_bins ${DD}test_bin_counts.txt --data_dir ${DD} --passes 1 --keep_n 10000 --no_above 0.90 --num_topics 50 --chunksize 1024 --n_workers 24 --log
+python -m src.topic_model.lda_over_time --train ${DD}train_authors_lda.txt --test ${DD}test_authors_lda.txt --train_bins ${DD}train-authors-seq.dat --test_bins ${DD}test-authors-seq.dat --data_dir ${DD} --passes 1 --keep_n 5000 --no_above 0.90 --num_topics 50 --chunksize 1024 --n_workers 24 --log
