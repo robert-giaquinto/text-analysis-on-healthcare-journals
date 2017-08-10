@@ -224,7 +224,7 @@ def main():
     if args.verbose:
         logging.basicConfig(format='%(name)s : %(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-    
+
     # The number of documents to analyze each iteration
     batch_size = args.batch_size
     # The total number of documents
@@ -247,7 +247,7 @@ def main():
     param_dir = args.data_dir + 'model_parameter_convergence/'
     if not os.path.isdir(param_dir):
         os.makedirs(param_dir)
-    
+
     for iteration, docs in enumerate(doc_stream):
         docs = filter(None, docs)
         wordids, wordcts = zip(*[zip(*d) for d in docs])

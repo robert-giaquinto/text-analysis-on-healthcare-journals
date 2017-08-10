@@ -10,6 +10,8 @@ from Queue import Empty as QueueEmpty
 from Queue import Full as QueueFull
 import subprocess
 import itertools
+from scipy.special import psi, gammaln
+from scipy.misc import logsumexp
 
 from src.topic_model.documents import Documents
 from src.utilities import pickle_it
@@ -139,8 +141,10 @@ class GensimLDA(object):
                 # measure perplexity
                 if self.num_test > 0:
                     perplexity = self._perplexity_score(model, self.docs.test_bow, self.num_test + self.num_train)
+                    lhood, beta_lhood, corpus_words = 0, 0, 0
                 else:
                     perplexity = self._perplexity_score(model, chunk)
+
 
                 logger.info("Pass: %d, chunk: %d/%d, perplexity: %f", p, i+1, evals_per_pass, round(perplexity,2))
                 convergence['perplexities'].append(perplexity)
@@ -225,6 +229,35 @@ class GensimLDA(object):
 
         perplexity = np.exp2(-perword_bound)
         return perplexity
+
+    def _perword_lhood(self, model, X):
+        """
+        Calculate perplexity on a set of documents X
+        """
+        corpus_words = sum(ct for doc in X for _, ct in doc)
+        gamma, _ = model.inference(X, collect_sstats=False)
+
+        lhood = 0.0
+        Elogtheta = psi(gamma) - psi(np.sum(gamma, 1))[:, np.newaxis]
+        expElogtheta = np.exp(Elogtheta)
+        _lambda = model.state.get_lambda()
+        Elogbeta = model.state.get_Elogbeta()
+
+        # E[log p(docs | theta, beta)]
+        for d, doc in enumerate(X):
+            lhood += np.sum(cnts * logsumexp(Elogtheta[d, :] + Elogbeta[:, ids]) for ids, cnts in doc)
+
+        # E[log p(theta | alpha) - log q(theta | gamma)]
+        lhood += np.sum((model.alpha - gamma) * Elogtheta)
+        lhood += np.sum(gammaln(gamma) - gammaln(model.alpha))
+        lhood += np.sum(gammaln(np.sum(model.alpha)) - gammaln(np.sum(gamma, 1)))
+
+        # E[log p(beta | eta) - log q (beta | lambda)]
+        beta_lhood = np.sum((model.eta - _lambda) * Elogbeta)
+        beta_lhood += np.sum(gammaln(_lambda) - gammaln(model.eta))
+        beta_lhood += np.sum(gammaln(np.sum(model.eta)) - gammaln(np.sum(_lambda, 1)))
+
+        return lhood, beta_lhood, corpus_words
 
     def topic_scores(self, performance_metric="NPMI"):
         """
@@ -439,17 +472,14 @@ class GensimLDA(object):
             betas.append(topic)
         return betas
 
-    def get_theta(self, bows, model=None):
+    def get_theta(self, bows):
         """
         Theta is the parameter for topic distribution over each document
         This can be a little faster than gensim's native 1 document at a time approach to inference
         :param bows: should be a list of bag of words vectors loaded into memory
         :return:
         """
-        if model is None:
-            model = self.model
-
-        gamma, _ = model.inference(bows, collect_sstats=False)
+        gamma, _ = self.model.inference(bows, collect_sstats=False)
         # normalize
         theta = []
         for g in gamma:
